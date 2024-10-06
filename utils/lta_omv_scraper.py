@@ -1,4 +1,8 @@
 from bs4 import BeautifulSoup
+import numpy as np
+import requests
+import time
+import pandas as pd
 
 def parse_lta_omv_response(response):
 
@@ -37,3 +41,31 @@ def parse_lta_omv_response(response):
                     # Append a tuple with the year, month, make, model, and value to the list
                     car_data.append((year_id, month_id, make, model_name, omv_value))
     return car_data
+
+def get_lta_omv_data(start_year, end_year):
+    year_ls = np.arange(start_year, end_year)
+    result_ls = []
+    for year in year_ls:
+        # The URL you want to send the GET request to
+        url = f"https://onemotoring.lta.gov.sg/content/onemotoring/home/buying/upfront-vehicle-costs/open-market-value--omv-.html?year={str(year)}"
+        
+        # Sending a GET request
+        response = requests.get(url)
+        time.sleep(1)
+        result = parse_lta_omv_response(response)
+        result_ls.extend(result)
+    return result_ls
+
+def preprocess_lta_omv_data(result_ls):
+    df_lta_car_data = pd.DataFrame(result_ls, columns=['year','month', 'make', 'model', 'omv'])
+    df_lta_car_data[['model_split', 'engine_cap']] = df_lta_car_data['model'].str.split('--', n=1, expand=True)
+    df_lta_car_data['omv_clean'] = df_lta_car_data['omv'].apply(lambda x:x.replace('S$', ''))
+    df_lta_car_data['omv_clean'] = df_lta_car_data['omv_clean'].apply(lambda x:int(x.replace(',', '')))
+    df_lta_car_data['model_split'] = df_lta_car_data['model_split'].apply(lambda x:x.lower())
+    df_lta_car_data['make_clean'] = df_lta_car_data['make'].apply(lambda x:x.lower())
+    df_lta_car_data['make_clean'] = df_lta_car_data['make_clean'].apply(lambda x:x.replace('.', ''))
+    df_lta_car_data['make_clean'] = df_lta_car_data['make_clean'].apply(lambda x:x.replace('rolls royce', 'rolls-royce'))
+    df_lta_car_data['make_clean'] = df_lta_car_data['make_clean'].apply(lambda x:x.replace('mercedes benz', 'mercedes-benz'))
+    df_lta_car_data['year'] = df_lta_car_data['year'].apply(lambda x:int(x))
+
+    return df_lta_car_data
