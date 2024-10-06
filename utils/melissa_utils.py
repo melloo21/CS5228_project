@@ -30,6 +30,17 @@ def display_feature_dist_by_ref_col(df: pd.DataFrame, feature:str, ref:str):
     print(f"Number of {ref} unable to be inputted {check_list.count(True)}")
     return df.groupby(ref)[feature].unique()
 
-def inpute_by_ref_col(df: pd.DataFrame, feature:str):
+def inpute_by_ref_col(df: pd.DataFrame, feature:str, ref:str, method:str):
+
+    # Calculate the mean of column B grouped by column A
+    values = df.groupby(ref)[feature].agg(
+        [method]).rename(
+            columns={method: feature})[feature]
     
-    return
+    # Iterate over each row in the DataFrame
+    for index, row in df.iterrows():
+        # If column B is NaN, fill it with the mean value of column B for the corresponding value in column A
+        if pd.isna(row[feature]):
+            df.at[index, feature] = values[row[ref]]
+    
+    return df
