@@ -1,5 +1,7 @@
 import re
+import pandas as pd
 
+### make model imputation ###
 def extract_make(title, compiled_regex):
     """
     Extract the car make from the title using the compiled regex.
@@ -31,3 +33,36 @@ def apply_make_extraction(df, compiled_regex):
     """
     df['extracted_make'] = df['title'].apply(lambda x: extract_make(x, compiled_regex))
     return df
+
+### cylinder extraction ###
+def extract_cylinder_from_features(feature):
+    # Regex pattern to match engine capacity (floating-point number followed by 'l')
+    pattern = r'\b(\d+)[ |-]?cylinder[s]?\b |\b[v|V][ ]?(\d+)\b'
+
+    # Use re.search to extract the engine capacity
+    match = re.search(pattern, feature)
+
+    if match:
+        cylinder_cnt = match.group(1) or match.group(2)
+        cylinder_cnt = int(cylinder_cnt)
+        if cylinder_cnt <= 12:
+            return cylinder_cnt
+        else:
+            return None
+    else:
+        return None
+    
+def extract_cylinder_by_model_make(df):
+    cylinder_count_dict = (
+        df.groupby(['make', 'model'])['cylinder_cnt']
+        .agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None) # agg by dataframe and take mode 
+        .dropna()  # Exclude groups with no valid cylinder count
+        .to_dict()
+    )
+    return cylinder_count_dict
+
+def impute_row_by_make_model(row, dict_to_impute, col):
+    # If col is missing, look up (make, model) in the dictionary
+    if pd.isnull(row[col]):
+        return dict_to_impute.get((row['make'], row['model']), row[col])
+    return row[col]
