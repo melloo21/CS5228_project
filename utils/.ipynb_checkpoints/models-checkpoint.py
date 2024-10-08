@@ -5,7 +5,7 @@ from typing import Union
 from sklearn import ensemble, svm, tree, linear_model
 from sklearn.model_selection import GridSearchCV, RepeatedKFold, KFold, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
-import xgboost as xgb
+
 # Fold references: https://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
 
 class Classification:
@@ -50,8 +50,7 @@ class Classification:
             "random_forest": ensemble.RandomForestClassifier(),
             "svc":svm.SVC(),
             "lr": linear_model.LogisticRegression(),
-            "knn": KNeighborsClassifier(),
-            'xgb': xgb.XGBRegressor()
+            "knn": KNeighborsClassifier()
 
         }
         return classifiers[model_name]
@@ -91,7 +90,7 @@ class Classification:
                 kfold_type=kfold_type,
                 n_splits=n_splits
             ),
-            n_jobs=5,
+            n_jobs=-1,
             refit=True
         ).fit(x_train , y_train )
 
