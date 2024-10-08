@@ -51,7 +51,8 @@ class Classification:
             "svc":svm.SVC(),
             "lr": linear_model.LogisticRegression(),
             "knn": KNeighborsClassifier(),
-            'xgb': xgb.XGBRegressor()
+            'xgb': xgb.XGBRegressor(),
+            "svr": svm.SVR()
 
         }
         return classifiers[model_name]
