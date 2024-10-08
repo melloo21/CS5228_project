@@ -2,6 +2,15 @@ import re
 import numpy as np
 import pandas as pd
 
+from typing import Any
+
+from sklearn.preprocessing import LabelEncoder,OneHotEncoder
+
+## General EDA Utils
+def isnan(value: Any) -> bool:
+    """Returns True if value is NaN, otherwise False"""
+    return value != value
+
 def rough_text_cleaner(feature: pd.Series) -> pd.Series:
     """
     This function performs a rough text cleaning operation on a pandas Series.
@@ -44,3 +53,80 @@ def inpute_by_ref_col(df: pd.DataFrame, feature:str, ref:str, method:str):
             df.at[index, feature] = values[row[ref]]
     
     return df
+
+def find_fuel_type(row:pd.Series, fuel_type:str):
+    find_fuel_type = any(
+                fuel_type in token.strip().lower() for token in re.compile(r"; |,|\*|\s|&|\|").split(row)
+            )
+    # Check if any exits 
+    if find_fuel_type:
+        return fuel_type
+    else: 
+        return None
+
+def fuel_type_row_extractor(row:pd.Series)->str:
+    # Check if the fuel type is present and not NaN
+    if isinstance(row.fuel_type, str) and row.fuel_type:
+        return row.fuel_type    
+    else:
+        for text in [row.get("description"), row.get("features"),row.get("category")]:
+            if not isinstance(text, str):
+                continue    
+            # check petrol-electric
+            if find_fuel_type(text,"petrol-electric"):
+                print(f"row pe {text}")
+                return "petrol-electric"
+            # check diesel-electric
+            if find_fuel_type(text,"diesel-electric"):
+                print(f"row de {text}")
+                return "diesel-electric"
+            # check diesel
+            if find_fuel_type(text,"diesel"):
+                return "diesel"
+            # check electric
+            if find_fuel_type(text,"electric"):
+                return "electric"
+            # check petrol
+            if find_fuel_type(text,"petrol"):
+                return "petrol"
+
+        return np.nan
+    
+def get_fuel_type(df:pd.DataFrame)-> pd.DataFrame:
+    """
+    Gets fuel type from feature/description
+
+    """
+    print(f"Original Imputation Nan {df.fuel_type.isna().sum()}")
+    df.fuel_type = df.apply(fuel_type_row_extractor, axis=1)
+    print(f"After Imputation Nan {df.fuel_type.isna().sum()}")
+    return df
+
+def encoding_vehicle_type_custom(type_of_vehicle: str):
+    """
+    Groups the different types of vehicles into a smaller number
+    of categories to handle sparsity issues by assigning a number
+    to each meso-group of vehicles. After this has been
+    run, the column should be made categorical
+    """
+    VEHICLE_CATEGORIES = [
+    {"sports car"},
+    {"luxury sedan", "suv"},
+    {"others", "mpv", "stationwagon", "mid-sized sedan"},
+    ]
+    if not type_of_vehicle or not isinstance(type_of_vehicle, str):
+        type_of_vehicle = "others"
+
+    for cat_num, cat in enumerate(VEHICLE_CATEGORIES, start=1):
+        if type_of_vehicle in cat:
+            return cat_num
+
+    return 0
+
+def generic_one_hotencoding(df:pd.DataFrame, column_name:str)->pd.DataFrame:
+    # One-Hot Encoding
+    encoder = OneHotEncoder(sparse_output=False)
+    encoded_data = encoder.fit_transform(df[[column_name]])
+    encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out([column_name]))
+    
+    return pd.concat([df, encoded_df], axis=1)
