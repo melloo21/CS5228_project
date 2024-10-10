@@ -5,3 +5,6 @@
 # !utils/
 # !utils/*
 EDA.ipynb
+
+model_assets/
+model_assets/*
