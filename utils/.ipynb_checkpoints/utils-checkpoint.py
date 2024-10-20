@@ -66,3 +66,7 @@ def impute_row_by_make_model(row, dict_to_impute, col):
     if pd.isnull(row[col]):
         return dict_to_impute.get((row['make'], row['model']), row[col])
     return row[col]
+
+class MakeModelImputer():
+    def __init__(self):
+        
