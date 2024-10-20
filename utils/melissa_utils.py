@@ -39,7 +39,7 @@ def display_feature_dist_by_ref_col(df: pd.DataFrame, feature:str, ref:str):
     print(f"Number of {ref} unable to be inputted {check_list.count(True)}")
     return df.groupby(ref)[feature].unique()
 
-def inpute_by_ref_col(df: pd.DataFrame, feature:str, ref:str, method:str):
+def inpute_by_ref_col(df: pd.DataFrame, feature:str, ref:str, method:str="mean"):
 
     # Calculate the mean of column B grouped by column A
     values = df.groupby(ref)[feature].agg(
