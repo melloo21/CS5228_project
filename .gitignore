@@ -9,3 +9,8 @@ EDA.ipynb
 iframe_figures/
 model_assets/
 model_assets/*
+
+*/.ipynb_checkpoints/*
+.ipynb_checkpoints/*
+
+*/__pycache__/*
