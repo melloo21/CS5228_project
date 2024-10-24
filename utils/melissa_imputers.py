@@ -12,6 +12,7 @@ class ModelMakeImputer:
         """
         Learn the imputation values for column_b grouped by column_a.
         """
+        # Model and Make 
         # Calculate the specified impute_type (mean, median, etc.) of column_b grouped by column_a
         self.values = df.groupby(self.column_a)[self.column_b].agg(self.impute_type)
 

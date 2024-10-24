@@ -50,6 +50,7 @@ def calculate_road_tax(engine_capacity, power, age_of_car, reg_date, scheme="Nor
         # https://nea.gov.sg/our-services/pollution-control/air-pollution/air-pollution-regulations
         # Assumption Euro IV compliant
         road_tax = min(525, (engine_capacity*0.625-100))
+        
     else:
         # Base Road Tax Calculation by Engine Capacity
         road_tax = calc_engine_cc(engine_capacity)
