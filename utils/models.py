@@ -93,7 +93,7 @@ class Regression:
                 kfold_type=kfold_type,
                 n_splits=n_splits
             ),
-            n_jobs=-1,
+            n_jobs=5,
             refit=True
         ).fit(x_train , y_train )
 
