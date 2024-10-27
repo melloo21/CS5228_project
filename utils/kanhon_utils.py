@@ -114,7 +114,6 @@ class LTADataImputer(BaseEstimator, TransformerMixin):
             else: 
                 return None
 
-
 class MakeModelImputer(BaseEstimator, TransformerMixin):
     def __init__(self, make_list):
         self.make_list = make_list
@@ -141,8 +140,6 @@ class MakeModelImputer(BaseEstimator, TransformerMixin):
         title = str(title).lower()
         matches = self.compiled_regex.findall(title)
         return matches[0] if matches else title.split()[0] # if no match, return first word of the title
-    
-
 
 class CylinderExtractor(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -297,3 +294,16 @@ class CategoryParser(BaseEstimator, TransformerMixin):
         # Split the string by commas and strip whitespace
         categories = [cat.strip().lower() for cat in category_string.split(',')]
         return categories
+
+
+############################## FORMAT ####################################
+# cylinder_imputer = CylinderImputer()
+# train_df = cylinder_imputer.fit_transform(train_df) # 1479 rows missing
+# val_df = cylinder_imputer.transform(val_df) # 334 rows missing
+# test_df = cylinder_imputer.transform(test_df)
+
+# # Many rows are missing, impute using median values
+# imputer = SimpleImputer(strategy='median')
+# train_df['cylinder_cnt'] = imputer.fit_transform(train_df[['cylinder_cnt']])
+# val_df['cylinder_cnt'] = imputer.transform(val_df[['cylinder_cnt']])
+# test_df['cylinder_cnt'] = imputer.transform(test_df[['cylinder_cnt']])
