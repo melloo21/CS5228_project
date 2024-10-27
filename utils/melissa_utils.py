@@ -136,9 +136,13 @@ def vehicle_type_fit_transform(df:pd.DataFrame, column_name:str="type_of_vehicle
     returns encoded vehicle type to the df and the scale
     """
     encoder = OneHotEncoder(sparse_output=False)
-    encoded_data = encoder.fit_transform(df[[column_name]])
+    encoder.fit(df[[column_name]])
+    return vehicle_type_fit(df, encoder,column_name), encoder
+
+def vehicle_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle"):
+
+    encoded_data = encoder.transform(df[[column_name]])
     encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out([column_name]))
     
-    return pd.concat([df, encoded_df], axis=1) , encoder
-
+    return pd.concat([df, encoded_df], axis=1)
 

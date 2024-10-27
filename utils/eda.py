@@ -30,14 +30,15 @@ class OwnerImputer():
     
     ##Learns the parameters (like mean and median)
     def fit(self, df):
+        proc_df = df.copy().reset_index(drop=True)
         #Here we calculate the number of owners based on the number of months that have passed since reg_date
-        rows = df[df["no_of_owners"].notna()].index
-        
+        rows = proc_df[proc_df["no_of_owners"].notna()].index
+        print(len(rows))
         #Initialize to 0
         accumulated = []
         
         for r in rows:
-            row = df.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             owners = row["no_of_owners"]
             months = calculateDateDiff(reg_date)
@@ -57,8 +58,9 @@ class OwnerImputer():
 
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-        proc_df = df.copy()
+        proc_df = df.copy().reset_index(drop=True)
         rows = proc_df[proc_df["no_of_owners"].isna()].index
+
         for r in rows:
             #Get the number of regdate of the entry
             row = proc_df.iloc[r]
@@ -88,12 +90,13 @@ class mileageImputer():
     
     #Calculates the value of amount of mileage per month of use 
     def fit(self, df):
-        rows = df[df["mileage"].notna()].index
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["mileage"].notna()].index
         
         accumulated = []
         
         for r in rows:
-            row = df.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             mileage = row["mileage"]
             months = calculateDateDiff(reg_date)
@@ -110,24 +113,25 @@ class mileageImputer():
     def transform(self, df, strategy="mean"):
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-
-        rows = df[df["mileage"].isna()].index
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["mileage"].isna()].index
 
         for r in rows:
-            row = df.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             months = calculateDateDiff(reg_date)
             
             if strategy == "mean":
-                df.loc[r, "mileage"] = months * self.mean
+                proc_df.loc[r, "mileage"] = months * self.mean
             elif strategy == "median":
-                df.loc[r, "mileage"] = months * self.median
+                proc_df.loc[r, "mileage"] = months * self.median
             elif strategy == "mode":
-                df.loc[r, "mileage"] = months * self.mode
-                
+                proc_df.loc[r, "mileage"] = months * self.mode
+        return proc_df
+
     def fit_transform(self, df, strategy="mean"):
         self.fit(df)
-        self.transform(df, strategy)
+        return self.transform(df, strategy)
 
 def main():
     print(f"Reading csv...")

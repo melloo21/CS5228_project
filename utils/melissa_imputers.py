@@ -2,8 +2,11 @@ import pickle
 import pandas as pd
 
 class ModelMakeImputer:
-    def __init__(self, column_a, column_b, savepath, impute_type="median"):
+
+    def __init__(self, column_a, column_b, savepath=None, impute_type="median"):
+        # model make column
         self.column_a = column_a
+        # to be imputed column
         self.column_b = column_b
         self.impute_type = impute_type
         self.values = None
