@@ -7,7 +7,7 @@ from sklearn import ensemble, svm, tree, linear_model
 from sklearn.model_selection import GridSearchCV, RepeatedKFold, KFold, StratifiedKFold
 from sklearn.neighbors import KNeighborsRegressor
 
-import xgboost as xgb
+# import xgboost as xgb
 # Fold references: https://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
 
 class Regression:
@@ -53,7 +53,7 @@ class Regression:
             "svc":svm.SVC(),
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
-            'xgb': xgb.XGBRegressor(),
+            # 'xgb': xgb.XGBRegressor(),
             "svr": svm.SVR()
         }
         return regressors[model_name]
