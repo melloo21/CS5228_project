@@ -140,7 +140,7 @@ def vehicle_type_fit_transform(df:pd.DataFrame, column_name:str="type_of_vehicle
     return vehicle_type_fit(df, encoder,column_name), encoder
 
 def vehicle_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle"):
-
+    df = df.copy().reset_index(drop=True)
     encoded_data = encoder.transform(df[[column_name]])
     encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out([column_name]))
     

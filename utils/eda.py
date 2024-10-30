@@ -262,13 +262,16 @@ def imputeNoOwners(df):
     # getStats(y_test, y_pred)
     
 def calculateDateDiff(date: str):
-    date1 = datetime.strptime(date, dateFormat)
-    today = datetime.today()
-    
-    total_months = (today.year - date1.year) * 12 + (today.month - date1.month)
-    #print(f"total months: {total_months}")
+    try:
+        date1 = datetime.strptime(date, dateFormat)
+        today = datetime.today()
+        
+        total_months = (today.year - date1.year) * 12 + (today.month - date1.month)
+        #print(f"total months: {total_months}")
 
-    return total_months
+        return total_months
+    except Exception as e:
+        print(f" ERROR calculateDateDiff {e} DATE FORMAT :: {date} ")
 
 def add10Years(date: str):
     date1 = datetime.strptime(date, dateFormat)
