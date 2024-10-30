@@ -15,6 +15,9 @@ class DepreciationImputer(BaseEstimator, TransformerMixin):
         """
         Group by make, model and age and calculate mean depreciation for each group
         """
+        # Adding car age
+        X = self.calc_vehicle_age(X)
+
         self.avg_depreciation_rate_with_age = (
         X.groupby(['make', 'model', 'car_age'])['depreciation']
         .mean()
@@ -31,6 +34,7 @@ class DepreciationImputer(BaseEstimator, TransformerMixin):
         """
         Impute using mean values of same make, model, age group
         """
+        X = self.calc_vehicle_age(X)
         self.mean_depreciation = X['depreciation'].mean()
         for i, row in X.iterrows():
         # If depreciation is missing
@@ -54,13 +58,13 @@ class DepreciationImputer(BaseEstimator, TransformerMixin):
         self.fit(X)
         return self.transform(X)
 
-def calc_vehicle_age(X):
-        """
-        Calculate the age of a vehicle - Used for depreciation imputation
-        """
-        current_year = datetime.now().year
-        X['car_age'] = current_year - X['manufactured']
-        return X
+    def calc_vehicle_age(self, X):
+            """
+            Calculate the age of a vehicle - Used for depreciation imputation
+            """
+            current_year = datetime.now().year
+            X['car_age'] = current_year - X['manufactured']
+            return X
 
 def cap_coe_outliers(X):
     """
