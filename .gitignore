@@ -9,6 +9,7 @@ EDA.ipynb
 iframe_figures/
 model_assets/
 model_assets/*
+processed_dataset/*
 
 */.ipynb_checkpoints/*
 .ipynb_checkpoints/*

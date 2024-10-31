@@ -350,25 +350,27 @@ class RegressionEvaluate:
     def _plot_feature_immportance(
         self,
         model_name: str,
-        feature_importance: list,
-        asset_path: str = "/home/jupyter/pdm-facilities-training/assets/model_details",
+        features: list
     ) -> dict:
 
         try:
+            model = self._load_model(model_name)
+            feature_impt = pd.DataFrame({"feature": features, "importance":model.feature_importances_})
+            
+            plt.barh(feature_impt.feature, feature_impt.importance)
 
-            cols = json.load(open(f"{asset_path}/{model_name}_col.json"))
+            # Customize the plot
+            plt.title('Feature Importance')
+            plt.xlabel('Importance')
+            plt.ylabel('Feature')
+            plt.grid(axis='y')
 
-            fig = px.bar(x=feature_importance, y=cols["col_order"], orientation="h")
-
-            fig.update_layout(
-                barmode="stack", yaxis={"categoryorder": "total descending"}
-            )
+            # Show the plot
+            plt.show()
 
         except Exception as e:
 
-            print(f"[_plot_feature_immportance] :: {e}")
-
-        return fig
+            print(f"ERROR [_plot_feature_immportance] :: {e}")
 
     def _plot_perm_feature_immportance(
         self,
