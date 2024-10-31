@@ -3,7 +3,9 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
 from sklearn.preprocessing import MultiLabelBinarizer
-
+from utils.sgcarmart_scraper import get_emission_data
+import os
+from tqdm import tqdm
 
 ### make model imputation ###
 def extract_make(title, compiled_regex):
@@ -295,6 +297,82 @@ class CategoryParser(BaseEstimator, TransformerMixin):
         categories = [cat.strip().lower() for cat in category_string.split(',')]
         return categories
 
+
+class EmissionImputer():
+    '''
+    Data is extracted from SGCarMart
+    '''
+    def __init__(self, train_csv_dir=None, test_csv_dir=None):
+        # checks if files were scrapped
+        if os.path.exists(train_csv_dir):
+            self.train_emission_df = pd.read_csv(train_csv_dir)
+        else:
+            print('here')
+            return
+            self.train_emission_df = self._scrap_emission_data_from_sgcarmart(train_emission_df, train_csv_dir)
+            
+        # checks if files were scrapped
+        if os.path.exists(test_csv_dir):
+            self.test_emission_df = pd.read_csv(test_csv_dir)
+        else:
+            self.test_emission_df = self._scrap_emission_data_from_sgcarmart(test_emission_df, test_csv_dir)
+        self.preprocess_extracted_data()
+
+    def _scrap_emission_data_from_sgcarmart(self, df, csv_dir):
+        df['scrapped_emission_data'] = None
+        failed_idx = []
+        # Iterate over each row with index
+        for index, row in tqdm(df.iterrows()):
+            # print(index, row)
+            try:
+                # Check if data is already scrapped to resume operation
+                if pd.isna(row['scrapped_emission_data']) or row['scrapped_emission_data'] is None:
+                    # Apply the get_emission_data function and store in the DataFrame
+                    df.at[index, 'scrapped_emission_data'] = get_emission_data(row['listing_id'], row['title'])
+            except Exception as e:
+                print(e)
+                failed_idx.append(index)
+            # Save progress every few rows to a file 
+            if index % 100 == 0:  
+                df.to_csv("progress.csv", index=False)
+        
+        # Save final progress after the loop completes
+        df.to_csv(csv_dir, index=False)
+        return df
+
+    def preprocess_extracted_data(self):
+        def extract_emission(text):
+            if not isinstance(text, str):
+                return None
+            # Regex pattern to extract the numeric value before "g/km"
+            pattern = r"(\d+)\s*g/km"
+        
+            # Search for the pattern in the text
+            match = re.search(pattern, text)
+            
+            # Return the numeric value if found, otherwise None
+            if match:
+                return int(match.group(1))  # Convert to integer if needed
+            else:
+                return None
+        self.train_emission_df['emission_data'] = self.train_emission_df['scrapped_emission_data'].apply(extract_emission)
+        self.test_emission_df['emission_data'] = self.test_emission_df['scrapped_emission_data'].apply(extract_emission)
+
+    
+    def impute_values(self, df, df_type):
+        # Check for df_type validity
+        if df_type not in ["train", "test"]:
+            raise ValueError('Please pass df_type="train" or df_type="test" for imputation.')
+
+        # Select DataFrame based on type
+        emission_df = self.train_emission_df if df_type == "train" else self.test_emission_df
+        
+        # merge df with emission_df on listing id
+        merged_df = pd.merge(df, emission_df[['listing_id', 'emission_data']], on='listing_id', how='left')
+
+        return merged_df
+
+        
 
 ############################## FORMAT ####################################
 # cylinder_imputer = CylinderImputer()
