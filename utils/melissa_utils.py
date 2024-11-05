@@ -7,6 +7,22 @@ from typing import Any
 from sklearn.preprocessing import LabelEncoder,OneHotEncoder
 
 ## General EDA Utils
+def count_missing_rows_for_x_cols(df: pd.DataFrame, column_name: list) -> int:
+    """
+    Count the number of rows with missing values in the specified column.
+    
+    Args:
+    df (pd.DataFrame): The input DataFrame.
+    column_name (str): The name of the column to check for missing values.
+    
+    Returns:
+    int: The number of rows with missing values in the specified column.
+    """
+    print(f"Individual :: {df[column_name].isnull().sum()}")
+    missing_count = df[df[column_name].isnull().all(axis=1)].shape[0]
+    return missing_count
+
+
 def isnan(value: Any) -> bool:
     """Returns True if value is NaN, otherwise False"""
     return value != value

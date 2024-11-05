@@ -1,8 +1,10 @@
-import requests
-from bs4 import BeautifulSoup
-import argparse
 import re
+import argparse
 import difflib
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+
 
 
 def get_soup_from_url(url):
@@ -91,7 +93,56 @@ def get_best_spec_link(car_name, spec_link_dict):
     except Exception as e:
         # print(e)
         return 'UNKNOWN', None
-    
+
+def get_generic_specification_from_link(spec_link):
+    # Get all specs from link
+    url = f'https://www.sgcarmart.com/new_cars/{spec_link}'
+    soup = get_soup_from_url(url)
+
+    # Find the table with id 'submodel_spec'
+    spec_table = soup.find('table', id='submodel_spec')
+
+    # Initialize a dictionary to store the specifications
+    specifications = {}
+
+    # Check if the table exists
+    if spec_table:
+        # Iterate over all 'tr' elements in the table
+        for row in spec_table.find_all('tr'):
+            # Get all 'td' elements in the row
+            cells = row.find_all('td')
+            if len(cells) == 2:
+                # Get the specification name and value
+                spec_name = cells[0].get_text(strip=True)
+                spec_value = cells[1].get_text(strip=True)
+                specifications[spec_name] = spec_value
+
+    return specifications
+
+def getting_all_new_car_ref_specifications(df:pd.DataFrame):
+    default_specs = {'Engine & Transmission': "unknown", 'Engine Capacity': "unknown",
+    'Engine Type': "unknown", 'Fuel Type': "unknown", 'Drive Type': "unknown", 'Transmission': "unknown", 
+    'Performance': "unknown", 'Power': "unknown", 'Torque': "unknown", 'Acceleration': "unknown", 'Top Speed': "unknown", 
+    'Fuel Consumption': "unknown", 'CO2 Emission (LTA)': "unknown", 'Measurements': "unknown", 
+    'Vehicle Type': "unknown", 'Seating Capacity': "unknown", 'Dimensions (L x W x H)': "unknown", 
+    'Wheelbase': "unknown", 'Min Turning Radius': "unknown", 'Kerb Weight': "unknown", 'Fuel Tank Capacity': "unknown",
+    'Boot/Cargo Capacity': "unknown", 'Suspension (Front)': "unknown", 'Suspension (Rear)': "unknown", 
+    'Brakes (Front)': "unknown", 'Brakes (Rear)': "unknown", 'Rim Size': "unknown"}
+
+    all_specs_list = []
+
+    for i, row in tqdm(df.iterrows(), total=len(df)):
+        # To join the impute set and non impute
+        final_dict = {"listing_id" : df.listing_id.iloc[i]}
+        car_code_id = get_car_code_url(df.listing_id.iloc[i])
+        subcode_dict = get_subcode_dict(car_code_id)
+        best_match_name, spec_link = get_best_spec_link(df.title.iloc[i], subcode_dict)
+        if spec_link:
+            specs = get_generic_specification_from_link(spec_link)
+            final_dict.update(specs)
+        else: 
+            final_dict.update(default_specs)    
+
 def get_emission_data_from_spec_link(spec_link):
     if not spec_link:
         return 'UNKNOWN'
