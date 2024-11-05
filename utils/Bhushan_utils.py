@@ -44,9 +44,6 @@ class DepreciationImputer(BaseEstimator, TransformerMixin):
                 # Null records with matching make-model group but different vehicle age
                 elif make_model in self.avg_depreciation_rate_wo_age:
                     X.at[i, 'depreciation'] = self.avg_depreciation_rate_wo_age[make_model]
-                # Null records with no matching make-model
-                else:
-                    X.at[i, 'depreciation'] = self.mean_depreciation
 
         return X
     
@@ -54,25 +51,33 @@ class DepreciationImputer(BaseEstimator, TransformerMixin):
         self.fit(X)
         return self.transform(X)
 
-def calc_vehicle_age(X):
-        """
-        Calculate the age of a vehicle - Used for depreciation imputation
-        """
-        current_year = datetime.now().year
-        X['car_age'] = current_year - X['manufactured']
-        return X
-
 def cap_coe_outliers(X):
     """
     Cap coe values to the highest recorded value for given category
     """
-    coe_cap_A = 106000  # Max COE for Category A (engine capacity ≤ 1600 cc)
-    coe_cap_B = 150001  # Max COE for Category B (engine capacity > 1600 cc)
+    coe_cap_A = 106000  # Max COE for Category A (cars with engine capacity ≤ 1600 cc)
+    coe_cap_B = 150001  # Max COE for Category B (cars with engine capacity > 1600 cc)
+    coe_cap_C = 91101
 
-    X['coe'] = np.where(
-        X['engine_cap'] <= 1600,
+    conditions = [
+        (X['engine_cap'] <= 1600) & (X['type_of_vehicle'].isin(['hatchback', 'suv', 'mid-sized sedan', 'luxury sedan', 'mpv', 'sports car', 'stationwagon', 'other'])),
+        (X['engine_cap'] > 1600) & (X['type_of_vehicle'].isin(['hatchback', 'suv', 'mid-sized sedan', 'luxury sedan', 'mpv', 'sports car', 'stationwagon', 'other'])),
+        X['type_of_vehicle'].isin(['van', 'truck','bus/mini bus'])
+    ]
+
+    capping = [
         np.minimum(X['coe'], coe_cap_A),
-        np.minimum(X['coe'], coe_cap_B)
-    )
+        np.minimum(X['coe'], coe_cap_B),
+        np.minimum(X['coe'], coe_cap_C)
+    ]
+
+    X['coe'] = np.select(conditions, capping, default=X['coe'])
 
     return X
+
+def calc_vehicle_age(df):
+    
+    current_year = datetime.now().year
+    df['car_age'] = current_year - df['manufactured']
+
+    return df
