@@ -29,16 +29,15 @@ class OwnerImputer():
         pass
     
     ##Learns the parameters (like mean and median)
-    def fit(self, df):
-        proc_df = df.copy().reset_index(drop=True)
+    def fit(self, input):
         #Here we calculate the number of owners based on the number of months that have passed since reg_date
-        rows = proc_df[proc_df["no_of_owners"].notna()].index
-        print(len(rows))
+        rows = input[input["no_of_owners"].notna()].index
+        
         #Initialize to 0
         accumulated = []
         
         for r in rows:
-            row = proc_df.iloc[r]
+            row = input.iloc[r]
             reg_date = row["reg_date"]
             owners = row["no_of_owners"]
             months = calculateDateDiff(reg_date)
@@ -54,31 +53,27 @@ class OwnerImputer():
         print(f"[Number of months per owner]  ->  [mean = {self.mean}, median = {self.median}, mode = {self.mode}]")
     
     #Applies the mean as the imputed values for the na values
-    def transform(self, df, strategy="mean"):
-
+    def transform(self, input, strategy="mean"):
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-        proc_df = df.copy().reset_index(drop=True)
-        rows = proc_df[proc_df["no_of_owners"].isna()].index
-
+        
+        rows = input[input["no_of_owners"].isna()].index
         for r in rows:
             #Get the number of regdate of the entry
-            row = proc_df.iloc[r]
+            row = input.iloc[r]
             reg_date = row["reg_date"]
             months = calculateDateDiff(reg_date)
             
             if strategy == "mean":
-                proc_df.loc[r, "no_of_owners"] = months / self.mean
+                input.loc[r, "no_of_owners"] = months / self.mean
             elif strategy == "median":
-                proc_df.loc[r, "no_of_owners"] = months / self.median
+                input.loc[r, "no_of_owners"] = months / self.median
             elif strategy == "mode":
-                proc_df.loc[r, "no_of_owners"] = months / self.mode
-        
-        return proc_df
+                input.loc[r, "no_of_owners"] = months / self.mode
     
-    def fit_transform(self, df, strategy="mean"):
-        self.fit(df)
-        return self.transform(df, strategy)
+    def fit_transform(self, input, strategy="mean"):
+        self.fit(input)
+        self.transform(input, strategy)
         
 class mileageImputer():
     mean = None
@@ -89,14 +84,13 @@ class mileageImputer():
         pass
     
     #Calculates the value of amount of mileage per month of use 
-    def fit(self, df):
-        proc_df = df.copy().reset_index(drop=True)
-        rows = proc_df[proc_df["mileage"].notna()].index
+    def fit(self, input):
+        rows = input[input["mileage"].notna()].index
         
         accumulated = []
         
         for r in rows:
-            row = proc_df.iloc[r]
+            row = input.iloc[r]
             reg_date = row["reg_date"]
             mileage = row["mileage"]
             months = calculateDateDiff(reg_date)
@@ -110,39 +104,38 @@ class mileageImputer():
         
         print(f"[Miles per month]  ->  [mean = {self.mean}, median = {self.median}, mode = {self.mode}]")
     
-    def transform(self, df, strategy="mean"):
+    def transform(self, input, strategy="mean"):
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-        proc_df = df.copy().reset_index(drop=True)
-        rows = proc_df[proc_df["mileage"].isna()].index
+
+        rows = input[input["mileage"].isna()].index
 
         for r in rows:
-            row = proc_df.iloc[r]
+            row = input.iloc[r]
             reg_date = row["reg_date"]
             months = calculateDateDiff(reg_date)
             
             if strategy == "mean":
-                proc_df.loc[r, "mileage"] = months * self.mean
+                input.loc[r, "mileage"] = months * self.mean
             elif strategy == "median":
-                proc_df.loc[r, "mileage"] = months * self.median
+                input.loc[r, "mileage"] = months * self.median
             elif strategy == "mode":
-                proc_df.loc[r, "mileage"] = months * self.mode
-        return proc_df
-
-    def fit_transform(self, df, strategy="mean"):
-        self.fit(df)
-        return self.transform(df, strategy)
+                input.loc[r, "mileage"] = months * self.mode
+                
+    def fit_transform(self, input, strategy="mean"):
+        self.fit(input)
+        self.transform(input, strategy)
 
 def main():
     print(f"Reading csv...")
-    df = pd.read_csv(train)
+    input = pd.read_csv(train)
     
     #Retrieve only the features that we are interested in 
-    df = df[features]
+    input = input[features]
 
-    #Split the df
-    print("Splitting the df for train and val...")
-    X_train, X_val = train_test_split(df, test_size=0.2, random_state=5228)
+    #Split the input
+    print("Splitting the input for train and val...")
+    X_train, X_val = train_test_split(input, test_size=0.2, random_state=5228)
     
     #Reset the index and drops the original index
     X_train.reset_index(drop=True, inplace=True)
@@ -151,13 +144,13 @@ def main():
     print(X_train.head())
     
     print(f"Performing imputation...")
-    #imput = imputeNoOwners(df)
+    #imput = imputeNoOwners(input)
     imputer = OwnerImputer()
     imputer.fit(X_train)
     imputer.transform(X_train, strategy="mode")
     imputer.transform(X_val, strategy="mode")
 
-    #imputeMileage(df)
+    #imputeMileage(input)
     imputer = mileageImputer()
     imputer.fit(X_train)
     imputer.transform(X_train, strategy="mean")
@@ -188,8 +181,8 @@ def main():
     X_train_scaled.to_pickle("train_scaled.pkl")
     X_val_scaled.to_pickle("val_scaled.pkl")
     
-def filterYearsRegDateLifespan(df):
-    for idx, row in df.iterrows():
+def filterYearsRegDateLifespan(input):
+    for idx, row in input.iterrows():
         #print(row)
         lifespan = row["lifespan"]
         #print(f"lifespan: {lifespan}")
@@ -197,31 +190,31 @@ def filterYearsRegDateLifespan(df):
         
         #print(f"lifespan: {lifespan}, reg_date: {reg_date}")
         
-        df.loc[idx, "lifespan"] = extractYear(lifespan)
-        df.loc[idx, "reg_date"] = extractYear(reg_date)
+        input.loc[idx, "lifespan"] = extractYear(lifespan)
+        input.loc[idx, "reg_date"] = extractYear(reg_date)
 
-def imputeManufactured(df):
-    rows = df[df["manufactured"].isna()].index
+def imputeManufactured(input):
+    rows = input[input["manufactured"].isna()].index
     for r in rows:
-        row = df.iloc[r]
+        row = input.iloc[r]
         regDate = row["reg_date"][-4:]
         #print(f"reg date: {regDate}")
-        df.loc[r, "manufactured"] = float(regDate)
+        input.loc[r, "manufactured"] = float(regDate)
         
 
-def imputeLifespan(df):
-    rows = df[df["lifespan"].isna()].index
+def imputeLifespan(input):
+    rows = input[input["lifespan"].isna()].index
     #print(f"len of lifespan na: {len(rows)}")
     for r in rows:
-        row = df.iloc[r]
+        row = input.iloc[r]
         regDate = row["reg_date"]
         lifespan = add10Years(regDate)
-        df.loc[r, "lifespan"] = lifespan
+        input.loc[r, "lifespan"] = lifespan
 
-def imputeMileage(df):
-    rows = df[df["mileage"].isna()].index
+def imputeMileage(input):
+    rows = input[input["mileage"].isna()].index
     for r in rows:
-        row = df.iloc[r]
+        row = input.iloc[r]
         #print(f"row: {row}")
         regDate = row["reg_date"]
         months = calculateDateDiff(regDate)
@@ -229,13 +222,13 @@ def imputeMileage(df):
         #impute mileage based on reg_date 
         #we estimate that the average mileage of a car is 8000 miles per year
         estimated_mileage = months / 12 * 8000
-        df.loc[r, "mileage"] = estimated_mileage
+        input.loc[r, "mileage"] = estimated_mileage
         
 
-def imputeNoOwners(df):
-    rows = df[df["no_of_owners"].isna()].index
+def imputeNoOwners(input):
+    rows = input[input["no_of_owners"].isna()].index
     for r in rows:
-        row = df.iloc[r]
+        row = input.iloc[r]
 
         #Impute number of owners based on reg_date
         regDate = row["reg_date"]
@@ -243,7 +236,7 @@ def imputeNoOwners(df):
 
         # We estimate the number of owners based on every 3 years or 36 months
         estimated_owners = math.ceil(months / 36)
-        df.loc[r, "no_of_owners"] = estimated_owners
+        input.loc[r, "no_of_owners"] = estimated_owners
     
     # #Fit the model
     # print("Training the linear model...")
@@ -262,16 +255,13 @@ def imputeNoOwners(df):
     # getStats(y_test, y_pred)
     
 def calculateDateDiff(date: str):
-    try:
-        date1 = datetime.strptime(date, dateFormat)
-        today = datetime.today()
-        
-        total_months = (today.year - date1.year) * 12 + (today.month - date1.month)
-        #print(f"total months: {total_months}")
+    date1 = datetime.strptime(date, dateFormat)
+    today = datetime.today()
+    
+    total_months = (today.year - date1.year) * 12 + (today.month - date1.month)
+    #print(f"total months: {total_months}")
 
-        return total_months
-    except Exception as e:
-        print(f" ERROR calculateDateDiff {e} DATE FORMAT :: {date} ")
+    return total_months
 
 def add10Years(date: str):
     date1 = datetime.strptime(date, dateFormat)
@@ -294,17 +284,17 @@ def checkNan(data):
     print("Checking for nan in the data...")
     print(data.isnull().sum())
 
-#Splits the df into train and test and returns the split data
-def splitdf(df):
+#Splits the input into train and test and returns the split data
+def splitInput(input):
     #Extract y
-    y = df["price"]
+    y = input["price"]
     print(f"y shape: {y.shape}") #25000 samples
 
     #Get the features that we are interested in (added in coe since all values are present)
     features = ["reg_date", "no_of_owners", "mileage", "lifespan", "manufactured", "coe"]
 
     #Extract X 
-    X = df[features]
+    X = input[features]
     print(f"X shape: {X.shape}") #25000 samples x 6 features
     
     print(f"X : {X}")

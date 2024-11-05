@@ -57,14 +57,47 @@ class DepreciationImputer(BaseEstimator, TransformerMixin):
     def fit_transform(self, X):
         self.fit(X)
         return self.transform(X)
+    
+    def impute_vehicle_age(self, row):
+        mfg_date, reg_date = row["manufactured"], row["reg_date"]
+        current_year = datetime.now().year
+        if pd.notnull(mfg_date):
+            return current_year - mfg_date
+        else:
+            date_obj = datetime.strptime(reg_date, '%d-%b-%Y')
+            month = date_obj.month
+            year = date_obj.year     
+            if month == 12:
+                return current_year - (year -1)
+            else: 
+                return current_year - year
 
     def calc_vehicle_age(self, X):
             """
             Calculate the age of a vehicle - Used for depreciation imputation
             """
-            current_year = datetime.now().year
-            X['car_age'] = current_year - X['manufactured']
+            # Use reg date if manufactured not available
+            # If reg date is jan then put it as previous year 
+            X.loc[:,'car_age'] = X.apply(self.impute_vehicle_age,axis=1)
             return X
+
+
+def get_manufactured_date(row):
+    mfg_date, reg_date = row["manufactured"], row["reg_date"]
+    if pd.notnull(mfg_date):
+        return mfg_date
+    else:
+        date_obj = datetime.strptime(reg_date, '%d-%b-%Y')
+        month = date_obj.month
+        year = date_obj.year     
+        if month == 12:
+            return (year -1)
+        else: 
+            return year      
+
+def impute_manufactured_date(X):
+    X.loc[:,'manufactured'] = X.apply(get_manufactured_date,axis=1)
+    return X    
 
 def cap_coe_outliers(X):
     """
