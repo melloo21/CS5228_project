@@ -4,6 +4,7 @@ import pandas as pd
 
 from typing import Any
 
+from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.preprocessing import LabelEncoder,OneHotEncoder
 
 ## General EDA Utils

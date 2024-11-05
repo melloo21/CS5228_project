@@ -37,12 +37,13 @@ class DeregValImputer():
     def __init__(self):
         pass
     
-    def custom_fit_transform(self, input):
-        rows = input[input["dereg_value"].isna()].index
-        #rows = input[input["coe_age_left"].notna()].index
+    def custom_fit_transform(self, df):
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["dereg_value"].notna()].index
+        #rows = proc_df[proc_df["coe_age_left"].notna()].index
         
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             coe_age_left = row["coe_age_left"]
             coe = row["coe"]
             arf = row["arf"]
@@ -52,18 +53,20 @@ class DeregValImputer():
             coe_rebate = coe * coe_age_left / 120
             dereg_value = parf_rebate + coe_rebate
                 
-            input.loc[r, "dereg_value"] = dereg_value
-            # input.loc[r, "dereg_value_imputed"] = dereg_value
+            proc_df.loc[r, "dereg_value"] = dereg_value
+            # proc_df.loc[r, "dereg_value_imputed"] = dereg_value
+        return proc_df
             
-    def fit(self, input):
+    def fit(self, df):
+        proc_df = df.copy().reset_index(drop=True)
         #Here we calculate the dereg_value 
-        rows = input[input["dereg_value"].notna()].index
+        rows = proc_df[proc_df["dereg_value"].notna()].index
         
         #Initialize to 0
         accumulated = []
         
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             dereg = row["dereg_value"]
             accumulated.append(dereg)
         
@@ -74,21 +77,22 @@ class DeregValImputer():
         
         print(f"[dereg_value]  ->  [mean = {self.mean}, median = {self.median}, mode = {self.mode}]")
         
-    def transform(self, input, strategy="mean"):
+    def transform(self, df, strategy="mean"):
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-
-        rows = input[input["dereg_value"].isna()].index
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["dereg_value"].isna()].index
 
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             
             if strategy == "mean":
-                input.loc[r, "dereg_value"] = self.mean
+                proc_df.loc[r, "dereg_value"] = self.mean
             elif strategy == "median":
-                input.loc[r, "dereg_value"] = self.median
+                proc_df.loc[r, "dereg_value"] = self.median
             elif strategy == "mode":
-                input.loc[r, "dereg_value"] = self.mode
+                proc_df.loc[r, "dereg_value"] = self.mode
+        return proc_df
 
 
 #Calculates the amount of coe left for each vehicle
@@ -96,15 +100,16 @@ class CoeAgeImputer():
     def __init__(self):
         pass
     
-    def fit_transform(self, input):
+    def fit_transform(self, df):
         #Here we find all rows with a valid depre and valid dereg value and valid price
-        rows = input[input["reg_date"].notna()].index
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["reg_date"].notna()].index
         
         #Set 0 as the age for all entries
-        input["coe_age_left"] = 0
+        proc_df["coe_age_left"] = 0
         
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             #depre = row["depreciation"] 
             coe_year = row["reg_date"][-4:]
             #age_range = row["age_range"
@@ -120,34 +125,38 @@ class CoeAgeImputer():
                     pass
                 else:
                     print(f"Unexpected value from coe age imputer: {months_left}. reg_date is {coe_year} ")     
-                input.loc[r, "coe_age_left"] = months_left
+                proc_df.loc[r, "coe_age_left"] = months_left
+
+                return proc_df
+
             except Exception as e:
                 print(f"Exception encountered: {e}")
 
             
-class AgeRangeInputer():
+class AgeRangeproc_dfer():
     def __init__(self):
         pass
     
-    def fit_transform(self, input):
+    def fit_transform(self, df):
         #Here we create a default column to represent coe car, parf car or none of the above 
-        
+        proc_df = df.copy().reset_index(drop=True)
         #Perhaps we can use 0 for neither, 1 for parf car, 2 for coe car 
-        input["age_range"] = -1 #Set all of the values to -1 by default
+        proc_df["age_range"] = -1 #Set all of the values to -1 by default
         
-        rows = input[input["category"].notna()].index
+        rows = proc_df[proc_df["category"].notna()].index
         
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             cat = row["category"]
             
             for idx, kw in enumerate(keyWords):
                 if idx == 0 and kw.lower() in cat.lower(): #For parf car
-                    input.loc[r, "age_range"] = 0
+                    proc_df.loc[r, "age_range"] = 0
                     break
                 elif idx == 1 and kw.lower() in cat.lower(): #For coe car
-                    input.loc[r, "age_range"] = 1
+                    proc_df.loc[r, "age_range"] = 1
                     break
+        return proc_df
 
 #Attempts to impute X months per owner
 class OwnerImputer():
@@ -159,19 +168,19 @@ class OwnerImputer():
         pass
     
     ##Learns the parameters (like mean and median)
-    def fit(self, input):
+    def fit(self, df):
+        proc_df = df.copy().reset_index(drop=True)
         #Here we calculate the number of owners based on the number of months that have passed since reg_date
-        rows = input[input["no_of_owners"].notna()].index
-        
+        rows = proc_df[proc_df["no_of_owners"].notna()].index
+        print(len(rows))
         #Initialize to 0
         accumulated = []
         
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             owners = row["no_of_owners"]
-            #months = calculateDateDiff(reg_date)
-            months = row["coe_age_left"]
+            months = calculateDateDiff(reg_date)
             months_per_owner = months / owners
             accumulated.append(months_per_owner)
         
@@ -184,27 +193,31 @@ class OwnerImputer():
         print(f"[Number of months per owner]  ->  [mean = {self.mean}, median = {self.median}, mode = {self.mode}]")
     
     #Applies the mean as the imputed values for the na values
-    def transform(self, input, strategy="mean"):
+    def transform(self, df, strategy="mean"):
+
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-        
-        rows = input[input["no_of_owners"].isna()].index
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["no_of_owners"].isna()].index
+
         for r in rows:
             #Get the number of regdate of the entry
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             months = calculateDateDiff(reg_date)
             
             if strategy == "mean":
-                input.loc[r, "no_of_owners"] = months / self.mean
+                proc_df.loc[r, "no_of_owners"] = months / self.mean
             elif strategy == "median":
-                input.loc[r, "no_of_owners"] = months / self.median
+                proc_df.loc[r, "no_of_owners"] = months / self.median
             elif strategy == "mode":
-                input.loc[r, "no_of_owners"] = months / self.mode
+                proc_df.loc[r, "no_of_owners"] = months / self.mode
+        
+        return proc_df
     
-    def fit_transform(self, input, strategy="mean"):
-        self.fit(input)
-        self.transform(input, strategy)
+    def fit_transform(self, df, strategy="mean"):
+        self.fit(df)
+        return self.transform(df, strategy)
         
 class mileageImputer():
     mean = None
@@ -215,17 +228,17 @@ class mileageImputer():
         pass
     
     #Calculates the value of amount of mileage per month of use 
-    def fit(self, input):
-        rows = input[input["mileage"].notna()].index
+    def fit(self, df):
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["mileage"].notna()].index
         
         accumulated = []
         
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             mileage = row["mileage"]
-            #months = calculateDateDiff(reg_date)
-            months = row["coe_age_left"]
+            months = calculateDateDiff(reg_date)
             mileage_per_month = mileage / months
             accumulated.append(mileage_per_month)
         
@@ -236,35 +249,36 @@ class mileageImputer():
         
         print(f"[Miles per month]  ->  [mean = {self.mean}, median = {self.median}, mode = {self.mode}]")
     
-    def transform(self, input, strategy="mean"):
+    def transform(self, df, strategy="mean"):
         if strategy != "mean" and strategy != "median" and strategy != "mode":
             raise ValueError("transform() - strategy only accepts mean, median and mode")
-
-        rows = input[input["mileage"].isna()].index
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["mileage"].isna()].index
 
         for r in rows:
-            row = input.iloc[r]
+            row = proc_df.iloc[r]
             reg_date = row["reg_date"]
             months = calculateDateDiff(reg_date)
             
             if strategy == "mean":
-                input.loc[r, "mileage"] = months * self.mean
+                proc_df.loc[r, "mileage"] = months * self.mean
             elif strategy == "median":
-                input.loc[r, "mileage"] = months * self.median
+                proc_df.loc[r, "mileage"] = months * self.median
             elif strategy == "mode":
-                input.loc[r, "mileage"] = months * self.mode
-                
-    def fit_transform(self, input, strategy="mean"):
-        self.fit(input)
-        self.transform(input, strategy)
+                proc_df.loc[r, "mileage"] = months * self.mode
+        return proc_df
+
+    def fit_transform(self, df, strategy="mean"):
+        self.fit(df)
+        return self.transform(df, strategy)
 
 def main():
     print(f"Reading csv...")
-    input = pd.read_csv(train)
+    proc_df = pd.read_csv(train)
     
-    #Split the input
-    print("Splitting the input for train and val...")
-    X_train, X_val = train_test_split(input, test_size=0.2, random_state=5228, shuffle=True)
+    #Split the proc_df
+    print("Splitting the proc_df for train and val...")
+    X_train, X_val = train_test_split(proc_df, test_size=0.2, random_state=5228, shuffle=True)
     X_train_ = X_train.copy()
     
     #Here we remove any rows with a missing depre, dereg or price value as we need it to calculate the age of the vehicle
@@ -278,9 +292,11 @@ def main():
     nan_count = X_train.isna().sum()
     print(f"-------------- before nan count:\n{nan_count}")
     
-    imputer = AgeRangeInputer()
+    # [Run]
+    imputer = AgeRangeproc_dfer()
     imputer.fit_transform(X_train)
-    
+
+    # [Run]
     imputer = CoeAgeImputer()
     imputer.fit_transform(X_train)    
     
@@ -289,16 +305,18 @@ def main():
     # imputer.fit(X_train)
     # imputer.transform(X_train, strategy="mean")
     
-    #Try KNN imputer 
+    # [Run] Try KNN imputer 
     imputer = KNNImputer(n_neighbors=5)
     X_train[['coe_age_left', 'coe', 'dereg_value']] = imputer.fit_transform(X_train[['coe_age_left', 'coe', 'dereg_value']])
-    
+    # Validation set -- fit
+
     #Lets try to plot here
     plt.scatter(X_train["dereg_value"], X_train_["dereg_value"])
     plt.xlabel("imputed dereg_value")
     plt.ylabel("original dereg_value")
     plt.show()
     
+    # [Run]
     imputer = OwnerImputer()
     imputer.fit(X_train)
     imputer.transform(X_train, strategy="mode")
@@ -310,6 +328,7 @@ def main():
     plt.ylabel("imputed no_of_owners")
     plt.show()
     
+    # [Run]
     imputer = mileageImputer()
     imputer.fit(X_train)
     imputer.transform(X_train, strategy="mean")
@@ -330,12 +349,12 @@ def main():
     print(f"-------------- after nan count:\n{nan_count}")
     
     
-    # print(f"{input.iloc[333]}")
-    # print(f"{input.iloc[2321]}")
+    # print(f"{proc_df.iloc[333]}")
+    # print(f"{proc_df.iloc[2321]}")
     # Based on some prints, we can see that the respective entries are labelled correctly
     
     # #Retrieve only the features that we are interested in 
-    # input = input[features]
+    # proc_df = proc_df[features]
 
 
     
@@ -346,13 +365,13 @@ def main():
     # print(X_train.head())
     
     # print(f"Performing imputation...")
-    # #imput = imputeNoOwners(input)
+    # #imput = imputeNoOwners(proc_df)
     # imputer = OwnerImputer()
     # imputer.fit(X_train)
     # imputer.transform(X_train, strategy="mode")
     # imputer.transform(X_val, strategy="mode")
 
-    # #imputeMileage(input)
+    # #imputeMileage(proc_df)
     # imputer = mileageImputer()
     # imputer.fit(X_train)
     # imputer.transform(X_train, strategy="mean")
@@ -429,14 +448,14 @@ def get_parf_rebate(coe_age_left, arf, reg_date):
 
 
 #This function drops rows that have either missing depre, missing dereg or missing price
-def dropRows(input):    
-    input_cleaned = input.dropna(subset=["depreciation", "price"])
+def dropRows(proc_df):    
+    proc_df_cleaned = proc_df.dropna(subset=["depreciation", "price"])
     
-    return input_cleaned
+    return proc_df_cleaned
     
     
-def filterYearsRegDateLifespan(input):
-    for idx, row in input.iterrows():
+def filterYearsRegDateLifespan(proc_df):
+    for idx, row in proc_df.iterrows():
         #print(row)
         lifespan = row["lifespan"]
         #print(f"lifespan: {lifespan}")
@@ -444,31 +463,31 @@ def filterYearsRegDateLifespan(input):
         
         #print(f"lifespan: {lifespan}, reg_date: {reg_date}")
         
-        input.loc[idx, "lifespan"] = extractYear(lifespan)
-        input.loc[idx, "reg_date"] = extractYear(reg_date)
+        proc_df.loc[idx, "lifespan"] = extractYear(lifespan)
+        proc_df.loc[idx, "reg_date"] = extractYear(reg_date)
 
-def imputeManufactured(input):
-    rows = input[input["manufactured"].isna()].index
+def imputeManufactured(proc_df):
+    rows = proc_df[proc_df["manufactured"].isna()].index
     for r in rows:
-        row = input.iloc[r]
+        row = proc_df.iloc[r]
         regDate = row["reg_date"][-4:]
         #print(f"reg date: {regDate}")
-        input.loc[r, "manufactured"] = float(regDate)
+        proc_df.loc[r, "manufactured"] = float(regDate)
         
 
-def imputeLifespan(input):
-    rows = input[input["lifespan"].isna()].index
+def imputeLifespan(proc_df):
+    rows = proc_df[proc_df["lifespan"].isna()].index
     #print(f"len of lifespan na: {len(rows)}")
     for r in rows:
-        row = input.iloc[r]
+        row = proc_df.iloc[r]
         regDate = row["reg_date"]
         lifespan = add10Years(regDate)
-        input.loc[r, "lifespan"] = lifespan
+        proc_df.loc[r, "lifespan"] = lifespan
 
-def imputeMileage(input):
-    rows = input[input["mileage"].isna()].index
+def imputeMileage(proc_df):
+    rows = proc_df[proc_df["mileage"].isna()].index
     for r in rows:
-        row = input.iloc[r]
+        row = proc_df.iloc[r]
         #print(f"row: {row}")
         regDate = row["reg_date"]
         months = calculateDateDiff(regDate)
@@ -476,13 +495,13 @@ def imputeMileage(input):
         #impute mileage based on reg_date 
         #we estimate that the average mileage of a car is 8000 miles per year
         estimated_mileage = months / 12 * 8000
-        input.loc[r, "mileage"] = estimated_mileage
+        proc_df.loc[r, "mileage"] = estimated_mileage
         
 
-def imputeNoOwners(input):
-    rows = input[input["no_of_owners"].isna()].index
+def imputeNoOwners(proc_df):
+    rows = proc_df[proc_df["no_of_owners"].isna()].index
     for r in rows:
-        row = input.iloc[r]
+        row = proc_df.iloc[r]
 
         #Impute number of owners based on reg_date
         regDate = row["reg_date"]
@@ -490,7 +509,7 @@ def imputeNoOwners(input):
 
         # We estimate the number of owners based on every 3 years or 36 months
         estimated_owners = math.ceil(months / 36)
-        input.loc[r, "no_of_owners"] = estimated_owners
+        proc_df.loc[r, "no_of_owners"] = estimated_owners
     
     # #Fit the model
     # print("Training the linear model...")
@@ -538,17 +557,17 @@ def checkNan(data):
     print("Checking for nan in the data...")
     print(data.isnull().sum())
 
-#Splits the input into train and test and returns the split data
-def splitInput(input):
+#Splits the proc_df into train and test and returns the split data
+def splitproc_df(proc_df):
     #Extract y
-    y = input["price"]
+    y = proc_df["price"]
     print(f"y shape: {y.shape}") #25000 samples
 
     #Get the features that we are interested in (added in coe since all values are present)
     features = ["reg_date", "no_of_owners", "mileage", "lifespan", "manufactured", "coe"]
 
     #Extract X 
-    X = input[features]
+    X = proc_df[features]
     print(f"X shape: {X.shape}") #25000 samples x 6 features
     
     print(f"X : {X}")
