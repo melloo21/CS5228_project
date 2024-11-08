@@ -1,7 +1,12 @@
+import os
 import pickle
 import pandas as pd
+import numpy as np
 
-class ModelMakeImputer:
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.impute import KNNImputer, SimpleImputer
+
+class ModelMakeImputer(BaseEstimator, TransformerMixin):
 
     def __init__(self, column_a, column_b, savepath=None, impute_type="median"):
         # model make column
@@ -40,11 +45,71 @@ class ModelMakeImputer:
         self.fit(df)
         return self.transform(df)
 
-    def save_scale(self):
-        """Saving the values as a pickle"""
+class GenericKNNImputer(BaseEstimator, TransformerMixin):
 
-        if (self.values is None) and (self.path is None):
-            raise ValueError("The imputer has not been fitted yet. Please call fit() first.")
+    def __init__(self, feature:list, neighbours:int, imputed_feature:list):
+        self.feature = feature
+        self.neighbours = neighbours
+        self.imputed_feature = imputed_feature
+    
+    def fit(self, df:pd.DataFrame):
+        
+        impute_df = df[self.feature]
+        # Initialize KNNImputer
+        imputer = KNNImputer(n_neighbors=self.neighbours)
+        # Fit imputer 
+        self.imputer = imputer.fit(impute_df)
 
-        else: 
-            return
+    def transform(self, df:pd.DataFrame):
+
+        impute_df = df[self.feature]
+        # Perform imputation
+        imputed_array = self.imputer.transform(impute_df)     
+        # Create a DataFrame from the imputed array
+        imputed_df = pd.DataFrame(imputed_array, columns=self.feature)
+
+        return imputed_df[self.imputed_feature]
+
+    def fit_transform(self, df):
+        self.fit(df)
+        return self.transform(df)
+
+class GenericSGCarMartImputer:
+
+    def __init__(self, train_pickle_dir=None, test_pickle_dir=None):
+
+        if os.path.exists(train_pickle_dir):
+            self.train_scraped = pd.read_pickle(train_pickle_dir)
+        else:
+            raise NotImplementedError
+
+        if os.path.exists(test_pickle_dir):
+            self.test_scraped = pd.read_pickle(test_pickle_dir)
+        else:
+            raise NotImplementedError
+        
+        # [TODO] Tidy up map class
+        self.map_class = {
+            'power': 'Power',
+            'fuel_type' : 'Fuel Type',
+            'engine_cap': 'Engine Capacity',
+            'curb_weight': 'Kerb Weight'
+        }
+
+    def impute_if_missing(self, row, variable, ref_df):
+
+        if pd.isnull(row[variable]):
+            if ref_df[ref_df.listing_id==row["listing_id"]][self.map_class[variable]].empty:
+                return np.NaN
+            else:
+                return ref_df[ref_df.listing_id==row["listing_id"]][self.map_class[variable]].values[0]
+        else:
+            return row[variable]
+
+    def impute_val(self, df, variable:str, df_type:str):
+        assert df_type in ["train", "test"] , ValueError('Please pass df_type="train" or df_type="test" for imputation.')
+        
+        ref_df = self.train_scraped if df_type == "train" else self.test_scraped
+        
+        # Merge df with variable_df on listing id
+        return df.apply(self.impute_if_missing,axis=1, variable=variable, ref_df=ref_df)

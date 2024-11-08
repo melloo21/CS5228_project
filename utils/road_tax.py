@@ -1,3 +1,4 @@
+import pandas as pd
 
 # REF :: https://onemotoring.lta.gov.sg/content/onemotoring/home/buying/upfront-vehicle-costs/tax-structure.html
 def calc_power(power):

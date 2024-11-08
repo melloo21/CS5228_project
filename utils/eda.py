@@ -10,6 +10,7 @@ from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_sco
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.impute import KNNImputer
 from scipy import stats
 
 
@@ -18,6 +19,144 @@ train = "../cs-5228-2410-final-project/train.csv"
 dateFormat = "%d-%b-%Y"
 
 features = ["reg_date", "no_of_owners", "mileage", "lifespan", "manufactured"]
+
+keyWords = ["parf car", "coe car"]
+
+
+
+# If we can get the info of whether this vehicle is parf car or coe car, we can calulate the exact date when this car was previously sold
+# if parf car (0 to 10 years old) -> reg_date + 10 years - years_left (must be taxi or car) 
+# if coe car (10 to 20 years old) -> reg_date + 20 years - years_left
+
+#Imputes parf rebate to get the dereg value
+class DeregValImputer():
+    mean = None
+    median = None
+    mode = None
+    
+    def __init__(self):
+        pass
+    
+    def custom_fit_transform(self, df):
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["dereg_value"].notna()].index
+        #rows = proc_df[proc_df["coe_age_left"].notna()].index
+        
+        for r in rows:
+            row = proc_df.iloc[r]
+            coe_age_left = row["coe_age_left"]
+            coe = row["coe"]
+            arf = row["arf"]
+            reg_date = row["reg_date"]
+            
+            parf_rebate = get_parf_rebate(coe_age_left, arf, reg_date)
+            coe_rebate = coe * coe_age_left / 120
+            dereg_value = parf_rebate + coe_rebate
+                
+            proc_df.loc[r, "dereg_value"] = dereg_value
+            # proc_df.loc[r, "dereg_value_imputed"] = dereg_value
+        return proc_df
+            
+    def fit(self, df):
+        proc_df = df.copy().reset_index(drop=True)
+        #Here we calculate the dereg_value 
+        rows = proc_df[proc_df["dereg_value"].notna()].index
+        
+        #Initialize to 0
+        accumulated = []
+        
+        for r in rows:
+            row = proc_df.iloc[r]
+            dereg = row["dereg_value"]
+            accumulated.append(dereg)
+        
+        self.mean = np.mean(accumulated)
+        self.median = np.median(accumulated)
+        mode_result = stats.mode(accumulated, axis = None, keepdims=False)
+        self.mode = mode_result.mode
+        
+        print(f"[dereg_value]  ->  [mean = {self.mean}, median = {self.median}, mode = {self.mode}]")
+        
+    def transform(self, df, strategy="mean"):
+        if strategy != "mean" and strategy != "median" and strategy != "mode":
+            raise ValueError("transform() - strategy only accepts mean, median and mode")
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["dereg_value"].isna()].index
+
+        for r in rows:
+            row = proc_df.iloc[r]
+            
+            if strategy == "mean":
+                proc_df.loc[r, "dereg_value"] = self.mean
+            elif strategy == "median":
+                proc_df.loc[r, "dereg_value"] = self.median
+            elif strategy == "mode":
+                proc_df.loc[r, "dereg_value"] = self.mode
+        return proc_df
+
+
+#Calculates the amount of coe left for each vehicle
+class CoeAgeImputer():
+    def __init__(self):
+        pass
+    
+    def fit_transform(self, df):
+        #Here we find all rows with a valid depre and valid dereg value and valid price
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["reg_date"].notna()].index
+        
+        #Set 0 as the age for all entries
+        proc_df["coe_age_left"] = 0
+        
+        for r in rows:
+            row = proc_df.iloc[r]
+            #depre = row["depreciation"] 
+            coe_year = row["reg_date"][-4:]
+            #age_range = row["age_range"
+            
+            #Let's calculate the number of months left for the coe
+            try:
+                months_left = (datetime.now().year - int(coe_year)) * 12
+                if months_left >= 120 and months_left <= 240: #Vehicle is between 10 years and 20 years old 
+                    months_left -= 120
+                elif months_left > 240: #Probably vehicle is sold off already 
+                    months_left = 0
+                elif months_left < 120:
+                    pass
+                else:
+                    print(f"Unexpected value from coe age imputer: {months_left}. reg_date is {coe_year} ")     
+                proc_df.loc[r, "coe_age_left"] = months_left
+
+                return proc_df
+
+            except Exception as e:
+                print(f"Exception encountered: {e}")
+
+            
+class AgeRangeproc_dfer():
+    def __init__(self):
+        pass
+    
+    def fit_transform(self, df):
+        #Here we create a default column to represent coe car, parf car or none of the above 
+        proc_df = df.copy().reset_index(drop=True)
+        #Perhaps we can use 0 for neither, 1 for parf car, 2 for coe car 
+        proc_df["age_range"] = -1 #Set all of the values to -1 by default
+        
+        rows = proc_df[proc_df["category"].notna()].index
+        
+        for r in rows:
+            row = proc_df.iloc[r]
+            cat = row["category"]
+            
+            for idx, kw in enumerate(keyWords):
+                if idx == 0 and kw.lower() in cat.lower(): #For parf car
+                    proc_df.loc[r, "age_range"] = 0
+                    break
+                elif idx == 1 and kw.lower() in cat.lower(): #For coe car
+                    proc_df.loc[r, "age_range"] = 1
+                    break
+        return proc_df
 
 #Attempts to impute X months per owner
 class OwnerImputer():
@@ -135,61 +274,188 @@ class mileageImputer():
 
 def main():
     print(f"Reading csv...")
-    df = pd.read_csv(train)
+    proc_df = pd.read_csv(train)
     
-    #Retrieve only the features that we are interested in 
-    df = df[features]
-
-    #Split the df
-    print("Splitting the df for train and val...")
-    X_train, X_val = train_test_split(df, test_size=0.2, random_state=5228)
+    #Split the proc_df
+    print("Splitting the proc_df for train and val...")
+    X_train, X_val = train_test_split(proc_df, test_size=0.2, random_state=5228, shuffle=True)
+    X_train_ = X_train.copy()
     
-    #Reset the index and drops the original index
+    #Here we remove any rows with a missing depre, dereg or price value as we need it to calculate the age of the vehicle
+    #X_train = dropRows(X_train)
+    
+    #Reset the index first 
     X_train.reset_index(drop=True, inplace=True)
     X_val.reset_index(drop=True, inplace=True)
     
-    print(X_train.head())
     
-    print(f"Performing imputation...")
-    #imput = imputeNoOwners(df)
+    nan_count = X_train.isna().sum()
+    print(f"-------------- before nan count:\n{nan_count}")
+    
+    # [Run]
+    imputer = AgeRangeproc_dfer()
+    imputer.fit_transform(X_train)
+
+    # [Run]
+    imputer = CoeAgeImputer()
+    imputer.fit_transform(X_train)    
+    
+    # imputer = DeregValImputer()
+    # # imputer.custom_fit_transform(X_train)
+    # imputer.fit(X_train)
+    # imputer.transform(X_train, strategy="mean")
+    
+    # [Run] Try KNN imputer 
+    imputer = KNNImputer(n_neighbors=5)
+    X_train[['coe_age_left', 'coe', 'dereg_value']] = imputer.fit_transform(X_train[['coe_age_left', 'coe', 'dereg_value']])
+    # Validation set -- fit
+
+    #Lets try to plot here
+    plt.scatter(X_train["dereg_value"], X_train_["dereg_value"])
+    plt.xlabel("imputed dereg_value")
+    plt.ylabel("original dereg_value")
+    plt.show()
+    
+    # [Run]
     imputer = OwnerImputer()
     imputer.fit(X_train)
     imputer.transform(X_train, strategy="mode")
     imputer.transform(X_val, strategy="mode")
-
-    #imputeMileage(df)
+    
+    plt.figure()
+    plt.scatter(X_train["no_of_owners"], X_train_["no_of_owners"])
+    plt.xlabel("original no_of_owners")
+    plt.ylabel("imputed no_of_owners")
+    plt.show()
+    
+    # [Run]
     imputer = mileageImputer()
     imputer.fit(X_train)
     imputer.transform(X_train, strategy="mean")
     imputer.transform(X_val, strategy="mean")
+    
+    plt.figure()
+    plt.scatter(X_train["mileage"], X_train_["mileage"])
+    plt.xlabel("original mileage")
+    plt.ylabel("imputed mileage")
+    plt.show()
+    
+    
+    #Check to see if the imputer worked by tabulating a new column
+    #print(f"{X_train.iloc[222]}")
+    
+    #Test to see if dropRows did a good job
+    nan_count = X_train.isna().sum()
+    print(f"-------------- after nan count:\n{nan_count}")
+    
+    
+    # print(f"{proc_df.iloc[333]}")
+    # print(f"{proc_df.iloc[2321]}")
+    # Based on some prints, we can see that the respective entries are labelled correctly
+    
+    # #Retrieve only the features that we are interested in 
+    # proc_df = proc_df[features]
+
+
+    
+    # #Reset the index and drops the original index
+    # X_train.reset_index(drop=True, inplace=True)
+    # X_val.reset_index(drop=True, inplace=True)
+    
+    # print(X_train.head())
+    
+    # print(f"Performing imputation...")
+    # #imput = imputeNoOwners(proc_df)
+    # imputer = OwnerImputer()
+    # imputer.fit(X_train)
+    # imputer.transform(X_train, strategy="mode")
+    # imputer.transform(X_val, strategy="mode")
+
+    # #imputeMileage(proc_df)
+    # imputer = mileageImputer()
+    # imputer.fit(X_train)
+    # imputer.transform(X_train, strategy="mean")
+    # imputer.transform(X_val, strategy="mean")
         
-    imputeLifespan(X_train)
-    imputeLifespan(X_val)
+    # imputeLifespan(X_train)
+    # imputeLifespan(X_val)
         
-    imputeManufactured(X_train)
-    imputeManufactured(X_val)
+    # imputeManufactured(X_train)
+    # imputeManufactured(X_val)
     
-    #Dates cannot be fitted into the regression model we need to extract the useful feature of the dates 
-    #For our context, I'm just using the year for now 
-    filterYearsRegDateLifespan(X_train)
-    filterYearsRegDateLifespan(X_val)
+    # #Dates cannot be fitted into the regression model we need to extract the useful feature of the dates 
+    # #For our context, I'm just using the year for now 
+    # filterYearsRegDateLifespan(X_train)
+    # filterYearsRegDateLifespan(X_val)
     
-    X_train.to_pickle("train.pkl")
-    X_val.to_pickle("val.pkl")
+    # X_train.to_pickle("train.pkl")
+    # X_val.to_pickle("val.pkl")
     
-    #Imputation End
+    # #Imputation End
     
-    #Scale the data (Useful for KNN and Linear Regression models?)
-    scaler = MinMaxScaler()
+    # #Scale the data (Useful for KNN and Linear Regression models?)
+    # scaler = MinMaxScaler()
     
-    X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
-    X_val_scaled = pd.DataFrame(scaler.transform(X_val), columns=X_val.columns)
+    # X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
+    # X_val_scaled = pd.DataFrame(scaler.transform(X_val), columns=X_val.columns)
     
-    X_train_scaled.to_pickle("train_scaled.pkl")
-    X_val_scaled.to_pickle("val_scaled.pkl")
+    # X_train_scaled.to_pickle("train_scaled.pkl")
+    # X_val_scaled.to_pickle("val_scaled.pkl")
     
-def filterYearsRegDateLifespan(df):
-    for idx, row in df.iterrows():
+
+#This function takes in the amount of coe left in months and calculates the parf rebate
+def get_parf_rebate(coe_age_left, arf, reg_date):
+    #eg_year = reg_date[-4:]
+    reg_date_ = datetime.strptime(reg_date, dateFormat)
+    
+    cutoff_date = datetime.strptime("22-feb-2023", dateFormat)
+    
+    age_months = 120 - coe_age_left
+    age_years = age_months / 12 
+    
+    if reg_date_ < cutoff_date:
+        #Check for the estimated age of the vehicle based on its reg_date
+        if age_years < 5:
+            return 0.75 * arf
+        elif age_years < 6:
+            return 0.7 * arf
+        elif age_years < 7:
+            return 0.65 * arf
+        elif age_years < 8:
+            return 0.6 * arf
+        elif age_years < 9:
+            return 0.55 * arf
+        elif age_years < 10:
+            return 0.5 * arf
+        else:
+            return 0
+    else:
+        if age_years < 5:
+            return 0.75*arf if 0.75*arf < 60000 else 60000 
+        elif age_years < 6:
+            return 0.7*arf if 0.7*arf < 60000 else 60000
+        elif age_years < 7:
+            return 0.65*arf if 0.65*arf < 60000 else 60000
+        elif age_years < 8:
+            return 0.6*arf if 0.6*arf < 60000 else 60000
+        elif age_years < 9:
+            return 0.55*arf if 0.55*arf < 60000 else 60000
+        elif age_years < 10:
+            return 0.5*arf if 0.5*arf < 60000 else 60000
+        else:
+            return 0
+        
+
+
+#This function drops rows that have either missing depre, missing dereg or missing price
+def dropRows(proc_df):    
+    proc_df_cleaned = proc_df.dropna(subset=["depreciation", "price"])
+    
+    return proc_df_cleaned
+    
+    
+def filterYearsRegDateLifespan(proc_df):
+    for idx, row in proc_df.iterrows():
         #print(row)
         lifespan = row["lifespan"]
         #print(f"lifespan: {lifespan}")
@@ -197,31 +463,31 @@ def filterYearsRegDateLifespan(df):
         
         #print(f"lifespan: {lifespan}, reg_date: {reg_date}")
         
-        df.loc[idx, "lifespan"] = extractYear(lifespan)
-        df.loc[idx, "reg_date"] = extractYear(reg_date)
+        proc_df.loc[idx, "lifespan"] = extractYear(lifespan)
+        proc_df.loc[idx, "reg_date"] = extractYear(reg_date)
 
-def imputeManufactured(df):
-    rows = df[df["manufactured"].isna()].index
+def imputeManufactured(proc_df):
+    rows = proc_df[proc_df["manufactured"].isna()].index
     for r in rows:
-        row = df.iloc[r]
+        row = proc_df.iloc[r]
         regDate = row["reg_date"][-4:]
         #print(f"reg date: {regDate}")
-        df.loc[r, "manufactured"] = float(regDate)
+        proc_df.loc[r, "manufactured"] = float(regDate)
         
 
-def imputeLifespan(df):
-    rows = df[df["lifespan"].isna()].index
+def imputeLifespan(proc_df):
+    rows = proc_df[proc_df["lifespan"].isna()].index
     #print(f"len of lifespan na: {len(rows)}")
     for r in rows:
-        row = df.iloc[r]
+        row = proc_df.iloc[r]
         regDate = row["reg_date"]
         lifespan = add10Years(regDate)
-        df.loc[r, "lifespan"] = lifespan
+        proc_df.loc[r, "lifespan"] = lifespan
 
-def imputeMileage(df):
-    rows = df[df["mileage"].isna()].index
+def imputeMileage(proc_df):
+    rows = proc_df[proc_df["mileage"].isna()].index
     for r in rows:
-        row = df.iloc[r]
+        row = proc_df.iloc[r]
         #print(f"row: {row}")
         regDate = row["reg_date"]
         months = calculateDateDiff(regDate)
@@ -229,13 +495,13 @@ def imputeMileage(df):
         #impute mileage based on reg_date 
         #we estimate that the average mileage of a car is 8000 miles per year
         estimated_mileage = months / 12 * 8000
-        df.loc[r, "mileage"] = estimated_mileage
+        proc_df.loc[r, "mileage"] = estimated_mileage
         
 
-def imputeNoOwners(df):
-    rows = df[df["no_of_owners"].isna()].index
+def imputeNoOwners(proc_df):
+    rows = proc_df[proc_df["no_of_owners"].isna()].index
     for r in rows:
-        row = df.iloc[r]
+        row = proc_df.iloc[r]
 
         #Impute number of owners based on reg_date
         regDate = row["reg_date"]
@@ -243,7 +509,7 @@ def imputeNoOwners(df):
 
         # We estimate the number of owners based on every 3 years or 36 months
         estimated_owners = math.ceil(months / 36)
-        df.loc[r, "no_of_owners"] = estimated_owners
+        proc_df.loc[r, "no_of_owners"] = estimated_owners
     
     # #Fit the model
     # print("Training the linear model...")
@@ -262,16 +528,13 @@ def imputeNoOwners(df):
     # getStats(y_test, y_pred)
     
 def calculateDateDiff(date: str):
-    try:
-        date1 = datetime.strptime(date, dateFormat)
-        today = datetime.today()
-        
-        total_months = (today.year - date1.year) * 12 + (today.month - date1.month)
-        #print(f"total months: {total_months}")
+    date1 = datetime.strptime(date, dateFormat)
+    today = datetime.today()
+    
+    total_months = (today.year - date1.year) * 12 + (today.month - date1.month)
+    #print(f"total months: {total_months}")
 
-        return total_months
-    except Exception as e:
-        print(f" ERROR calculateDateDiff {e} DATE FORMAT :: {date} ")
+    return total_months
 
 def add10Years(date: str):
     date1 = datetime.strptime(date, dateFormat)
@@ -294,17 +557,17 @@ def checkNan(data):
     print("Checking for nan in the data...")
     print(data.isnull().sum())
 
-#Splits the df into train and test and returns the split data
-def splitdf(df):
+#Splits the proc_df into train and test and returns the split data
+def splitproc_df(proc_df):
     #Extract y
-    y = df["price"]
+    y = proc_df["price"]
     print(f"y shape: {y.shape}") #25000 samples
 
     #Get the features that we are interested in (added in coe since all values are present)
     features = ["reg_date", "no_of_owners", "mileage", "lifespan", "manufactured", "coe"]
 
     #Extract X 
-    X = df[features]
+    X = proc_df[features]
     print(f"X shape: {X.shape}") #25000 samples x 6 features
     
     print(f"X : {X}")
