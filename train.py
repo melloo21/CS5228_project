@@ -1,24 +1,18 @@
 import pandas as pd
-
+from utils.constants import *
+from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold
 from sklearn.model_selection import cross_validate, cross_val_score
 from sklearn import ensemble, svm, tree, linear_model
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.experimental import enable_iterative_imputer, IterativeImputer
-from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
 from sklearn.preprocessing import Normalizer, MaxAbsScaler, MinMaxScaler, StandardScaler, QuantileTransformer, RobustScaler, PowerTransformer
-from sklearn.metrics import neg_root_mean_squared_error, r2, neg_mean_absolute_error,max_error
+from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error, r2_score, median_absolute_error,mean_absolute_percentage_error,mean_absolute_error, max_error
 
 # REF: SCALERS -- https://medium.com/@daython3/scaling-your-data-using-scikit-learn-scalers-3d4b584107d7
 
-# Reading the dataset
-local_path = "/Users/melloo21/Desktop/NUS Items/CS5228/Project/CS5228_project/"
-train_name = "train_df_imputation_v1"
-val_name = "val_df_imputation_v1"
-
-train_df = pd.read_csv(f"{local_path}/processed_dataset/{train_name}")
-val_df = pd.read_csv(f"{local_path}/processed_dataset/{val_name}")
-
 ## Flags
+raw_data=False
 impute_type = "simple"
 impute_strategy = "median" # mean, median, most_frequent, constant, Callable 
 impute_neighbours = 5
@@ -27,11 +21,15 @@ impute_max_iter= 10
 scaler_type = "minmax"
 model_type = "decision_tree"
 features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
-       'engine_cap', 'depreciation', 'mileage', 'no_of_owners','type_of_vehicle_bus/mini bus', 'type_of_vehicle_hatchback',
-       'type_of_vehicle_luxury sedan', 'type_of_vehicle_mid-sized sedan',
-       'type_of_vehicle_mpv', 'type_of_vehicle_others',
-       'type_of_vehicle_sports car', 'type_of_vehicle_stationwagon',
-       'type_of_vehicle_suv', 'type_of_vehicle_truck', 'type_of_vehicle_van']
+       'engine_cap', 'depreciation', 'mileage', 'no_of_owners']
+CV_FOLDS = 5
+# {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
+svr_kernel = 'rbf'
+# Fold types
+# kf = KFold(n_splits=5, shuffle=True, random_state=42)
+# skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+# ss = ShuffleSplit(n_splits=10, test_size=0.2, random_state=42)
+# sss = StratifiedShuffleSplit(n_splits=10, test_size=0.2, random_state=42)
 
 # Options (Can add more)
 scaler_choice = {
@@ -52,9 +50,22 @@ model_choice  = {
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
             'gb': ensemble.GradientBoostingRegressor(),
-            "svr": svm.SVR()
+            "svr": svm.SVR(kernel=svr_kernel )
         }
 
+# Do switching
+if raw_data:
+    test_size=0.2
+    random_state=42
+    shuffle=True
+    orig_df = pd.read_csv(r"./dataset/train.csv")
+    ## Split into train val split
+    train_df, val_df = train_test_split(orig_df, test_size=test_size, random_state=random_state, shuffle=shuffle)
+
+else:
+    # Reading the dataset
+    train_df = pd.read_csv(f"{local_path}/{folder}/{train_dataset}")
+    val_df = pd.read_csv(f"{local_path}/{folder}/{val_dataset}")
 # Get other scores
 # [TODO] :: Should we add a missing indicator as well?
 # from sklearn.impute import MissingIndicator
@@ -70,11 +81,11 @@ model = model_choice[model_type]
 # cv = cross_validate(model, X, y, cv=5, return_train_score=True)
 # Prepare data
 
-X_train[features] = imputer.fit_transform(X_train[features])
+train_df[features] = imputer.fit_transform(train_df[features])
 val_df[features] = imputer.transform(val_df[features])
 
 # Fit and transform the numerical columns
-X_train[features] = scaler.fit_transform(X_train[features])
+train_df[features] = scaler.fit_transform(train_df[features])
 val_df[features] = scaler.transform(val_df[features])
 
 X_train = train_df[features]
@@ -87,21 +98,32 @@ y_val = val_df['price']
 model.fit(X_train,y_train)
 
 # [TODO] We can do this on all as well
-scores = cross_val_score(model, X_train, y_train, cv=5, scoring="neg_root_mean_squared_error")
+scores = cross_val_score(model, X_train, y_train, cv=CV_FOLDS, scoring="neg_root_mean_squared_error").mean()
 
 # Evaluate on the hold-out set
 y_pred = model.predict(X_val)
+y_train_pred = model.predict(X_train)
 
 # Metrics that we are tracking
-holdout_rmse = neg_root_mean_squared_error(y_val, y_pred)
+train_rmse = root_mean_squared_error(y_train, y_train_pred)
+holdout_rmse = root_mean_squared_error(y_val, y_pred)
 holdout_r2 = r2_score(y_val, y_pred)
 holdout_mae = mean_absolute_error(y_val, y_pred)
+train_mae = mean_absolute_error(y_train, y_train_pred)
 holdout_max_error = max_error(y_val, y_pred)
-print("CV Score ", scores.mean())
-print("\nHold-out set scores:")
-print("RMSE:", holdout_rmse)
-print("R^2:", holdout_r2)
-print("MAE:", holdout_mae)
-print("Max Error:", holdout_max_error)
+train_max_error= max_error(y_train, y_train_pred)
+holdout_mape = mean_absolute_percentage_error(y_val, y_pred)
+
+print("scores: %f" % scores)
+print("train_rmse: %f" % train_rmse)
+print("train_mae: %f" % train_mae)
+print("train_max_error: %f" % train_max_error)
+
+print("holdout_rmse: %f" % holdout_rmse)
+print("holdout_r2: %f" % holdout_r2)
+print("holdout_mae: %f" % holdout_mae)
+print("holdout_max_error: %f" % holdout_max_error)
+print("holdout_mape: %f" % holdout_mape)
+
 
 

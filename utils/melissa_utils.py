@@ -148,15 +148,15 @@ def generic_one_hotencoding(df:pd.DataFrame, column_name:str)->pd.DataFrame:
     
     return pd.concat([df, encoded_df], axis=1)
 
-def vehicle_type_fit_transform(df:pd.DataFrame, column_name:str="type_of_vehicle"):
+def onehot_fit_transform(df:pd.DataFrame, column_name:str="type_of_vehicle"):
     """
     returns encoded vehicle type to the df and the scale
     """
-    encoder = OneHotEncoder(sparse_output=False)
+    encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     encoder.fit(df[[column_name]])
-    return vehicle_type_fit(df, encoder,column_name), encoder
+    return onehot_type_fit(df, encoder,column_name), encoder
 
-def vehicle_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle"):
+def onehot_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle"):
     df = df.copy().reset_index(drop=True)
     encoded_data = encoder.transform(df[[column_name]])
     encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out([column_name]))
