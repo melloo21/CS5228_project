@@ -1,4 +1,5 @@
 import pandas as pd
+# import lightgbm as lgb
 from utils.constants import *
 from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold, train_test_split
 from sklearn.model_selection import cross_validate, cross_val_score
@@ -12,19 +13,19 @@ from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error,
 # REF: SCALERS -- https://medium.com/@daython3/scaling-your-data-using-scikit-learn-scalers-3d4b584107d7
 
 ## Flags
-raw_data=True
+raw_data=False
 impute_type = "KNN"
 impute_strategy = "median" # mean, median, most_frequent, constant, Callable 
 impute_neighbours = 30
 random_state = 0
 impute_max_iter= 10
-scale_flag = True
+scale_flag = False
 scaler_type = "minmax"
-model_type = "lr"
-features = [ 'power', 'dereg_value', 'depreciation', 'arf','coe', 'mileage']
+model_type = "gb"
+features = [ 'power', 'depreciation', 'dereg_value', 'omv', 'arf','cylinder_cnt','road_tax','engine_cap','mileage','car_age']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
-svr_kernel = 'rbf'
+svr_kernel = 'poly'
 # Fold types
 # kf = KFold(n_splits=5, shuffle=True, random_state=42)
 # skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -50,7 +51,8 @@ model_choice  = {
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
             'gb': ensemble.GradientBoostingRegressor(),
-            "svr": svm.SVR(kernel=svr_kernel )
+            "svr": svm.SVR(kernel=svr_kernel ,degree=2),
+            # "lgb":  lgb.LGBMRegressor()
         }
 
 # Do switching

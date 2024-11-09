@@ -23,6 +23,8 @@ def count_missing_rows_for_x_cols(df: pd.DataFrame, column_name: list) -> int:
     missing_count = df[df[column_name].isnull().all(axis=1)].shape[0]
     return missing_count
 
+def retun_numeric_cols(df:pd.DataFrame):
+    return df.select_dtypes(include=['int64', 'float64']).columns
 
 def isnan(value: Any) -> bool:
     """Returns True if value is NaN, otherwise False"""
