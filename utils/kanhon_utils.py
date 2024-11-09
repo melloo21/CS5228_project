@@ -307,8 +307,6 @@ class EmissionImputer():
         if os.path.exists(train_csv_dir):
             self.train_emission_df = pd.read_csv(train_csv_dir)
         else:
-            print('here')
-            return
             self.train_emission_df = self._scrap_emission_data_from_sgcarmart(train_emission_df, train_csv_dir)
             
         # checks if files were scrapped
