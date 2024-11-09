@@ -1,6 +1,6 @@
 import pandas as pd
 from utils.constants import *
-from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold, train_test_split
 from sklearn.model_selection import cross_validate, cross_val_score
 from sklearn import ensemble, svm, tree, linear_model
 from sklearn.neighbors import KNeighborsRegressor
@@ -12,16 +12,16 @@ from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error,
 # REF: SCALERS -- https://medium.com/@daython3/scaling-your-data-using-scikit-learn-scalers-3d4b584107d7
 
 ## Flags
-raw_data=False
-impute_type = "simple"
+raw_data=True
+impute_type = "KNN"
 impute_strategy = "median" # mean, median, most_frequent, constant, Callable 
-impute_neighbours = 5
-randome_state = 0
+impute_neighbours = 30
+random_state = 0
 impute_max_iter= 10
+scale_flag = True
 scaler_type = "minmax"
-model_type = "decision_tree"
-features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
-       'engine_cap', 'depreciation', 'mileage', 'no_of_owners']
+model_type = "lr"
+features = [ 'power', 'dereg_value', 'depreciation', 'arf','coe', 'mileage']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
 svr_kernel = 'rbf'
@@ -41,7 +41,7 @@ scaler_choice = {
 impute_choice = {
     "simple" : SimpleImputer(strategy=impute_strategy),
     "KNN" : KNNImputer(n_neighbors=impute_neighbours),
-    "iterative": IterativeImputer(max_iter=impute_max_iter, random_state=randome_state)
+    "iterative": IterativeImputer(max_iter=impute_max_iter, random_state=random_state)
 }
 
 model_choice  = {
@@ -84,9 +84,10 @@ model = model_choice[model_type]
 train_df[features] = imputer.fit_transform(train_df[features])
 val_df[features] = imputer.transform(val_df[features])
 
-# Fit and transform the numerical columns
-train_df[features] = scaler.fit_transform(train_df[features])
-val_df[features] = scaler.transform(val_df[features])
+if scale_flag:
+    # Fit and transform the numerical columns
+    train_df[features] = scaler.fit_transform(train_df[features])
+    val_df[features] = scaler.transform(val_df[features])
 
 X_train = train_df[features]
 y_train = train_df['price']
