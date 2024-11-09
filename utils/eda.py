@@ -258,21 +258,131 @@ class mileageImputer():
         self.fit(input)
         self.transform(input, strategy)
 
+
+def outlier_checking(data):
+    #print(data.columns)
+    fig, ax = plt.subplots(5, 2,figsize=(15, 15))
+    
+    ax[0,0].hist(data['curb_weight'], bins="auto")
+    ax[0,0].set_title('curb_weight')
+    ax[0,1].hist(data['power'], bins="auto")
+    ax[0,1].set_title('power')
+    ax[1,0].hist(data['engine_cap'], bins="auto")
+    ax[1,0].set_title('engine_cap')
+    ax[1,1].hist(data['depreciation'], bins="auto")
+    ax[1,1].set_title('depreciation')
+    ax[2,0].hist(data['coe'], bins="auto")
+    ax[2,0].set_title('coe')
+    ax[2,1].hist(data['road_tax'], bins="auto")
+    ax[2,1].set_title('road_tax')
+    ax[3,0].hist(data['dereg_value'], bins="auto")
+    ax[3,0].set_title('dereg_value')
+    ax[3,1].hist(data['mileage'], bins="auto")
+    ax[3,1].set_title('mileage')
+    ax[4,0].hist(data['omv'], bins="auto")
+    ax[4,0].set_title('omv')
+    ax[4,1].hist(data['arf'], bins="auto")
+    ax[4,1].set_title('arf')
+    
+    fig.tight_layout()
+    plt.show()    
+
+def cal_zscore(data):
+    zscores = np.abs(stats.zscore(data['curb_weight'], nan_policy='omit'))
+    #print(f" curb_weight: {zscores}")
+    # Identify rows with outliers
+    #print(zscores.shape)
+    outlier_rows = np.where(zscores > 3)[0]
+    #print(outlier_rows)
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in curb weight")
+    zscores = np.abs(stats.zscore(data['power'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in power")
+    zscores = np.abs(stats.zscore(data['engine_cap'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in engine cap")
+    zscores = np.abs(stats.zscore(data['depreciation'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in depreciation")
+    zscores =np.abs( stats.zscore(data['coe'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in coe")
+    zscores = np.abs(stats.zscore(data['road_tax'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in road tax")
+    zscores = np.abs(stats.zscore(data['dereg_value'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in dereg value")
+    zscores = np.abs(stats.zscore(data['mileage'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in mileage")
+    zscores = np.abs(stats.zscore(data['omv'], nan_policy='omit'))
+    #print(zscores)
+    outlier_rows = np.where(zscores > 3)[0]
+    # Print the outlier rows
+    print(f"There are {len(outlier_rows)} outliers in omv")
+    zscores = np.abs(stats.zscore(data['arf'], nan_policy='omit'))
+    #print(zscores)
+    
+    
+    # # Select data points with a z-scores above or below 3
+    # filtered_entries = (zscores < 3).all(axis=1)
+    # filtered_entries = data[filtered_entries]
+    
+    # return filtered_entries
+
+#Check that for each row, the data makes logical sense
+def sanity_check(data):
+    #Check that the manufactured date is earlier than the reg_date 
+    
+    problem_rows = []
+    
+    for idx, row in data.iterrows():
+        try:
+            if row['manufactured'] > int(row["reg_date"][-4:]):
+                #print(f"row {idx} manufactured date is later than registered date") 
+                problem_rows.append(idx)
+        except Exception as e:
+            print(f"exception was {e}")
+            pass
+    
+    print(f"There are {len(problem_rows)} problem rows")
+
 def main():
     print(f"Reading csv...")
     input = pd.read_csv(train)
     
+
     #Split the input
     print("Splitting the input for train and val...")
     X_train, X_val = train_test_split(input, test_size=0.2, random_state=5228, shuffle=True)
     X_train_ = X_train.copy()
     
-    #Here we remove any rows with a missing depre, dereg or price value as we need it to calculate the age of the vehicle
-    #X_train = dropRows(X_train)
-    
     #Reset the index first 
     X_train.reset_index(drop=True, inplace=True)
     X_val.reset_index(drop=True, inplace=True)
+    
+    
+    # ======================= Outlier checking =======================
+    print(X_train.columns)
+    outlier_checking(X_train)
+    cal_zscore(X_train)
+    sanity_check(X_train)
     
     
     nan_count = X_train.isna().sum()
@@ -283,11 +393,6 @@ def main():
     
     imputer = CoeAgeImputer()
     imputer.fit_transform(X_train)    
-    
-    # imputer = DeregValImputer()
-    # # imputer.custom_fit_transform(X_train)
-    # imputer.fit(X_train)
-    # imputer.transform(X_train, strategy="mean")
     
     #Try KNN imputer 
     imputer = KNNImputer(n_neighbors=5)
@@ -321,67 +426,10 @@ def main():
     plt.ylabel("imputed mileage")
     plt.show()
     
-    
-    #Check to see if the imputer worked by tabulating a new column
-    #print(f"{X_train.iloc[222]}")
-    
     #Test to see if dropRows did a good job
     nan_count = X_train.isna().sum()
     print(f"-------------- after nan count:\n{nan_count}")
     
-    
-    # print(f"{input.iloc[333]}")
-    # print(f"{input.iloc[2321]}")
-    # Based on some prints, we can see that the respective entries are labelled correctly
-    
-    # #Retrieve only the features that we are interested in 
-    # input = input[features]
-
-
-    
-    # #Reset the index and drops the original index
-    # X_train.reset_index(drop=True, inplace=True)
-    # X_val.reset_index(drop=True, inplace=True)
-    
-    # print(X_train.head())
-    
-    # print(f"Performing imputation...")
-    # #imput = imputeNoOwners(input)
-    # imputer = OwnerImputer()
-    # imputer.fit(X_train)
-    # imputer.transform(X_train, strategy="mode")
-    # imputer.transform(X_val, strategy="mode")
-
-    # #imputeMileage(input)
-    # imputer = mileageImputer()
-    # imputer.fit(X_train)
-    # imputer.transform(X_train, strategy="mean")
-    # imputer.transform(X_val, strategy="mean")
-        
-    # imputeLifespan(X_train)
-    # imputeLifespan(X_val)
-        
-    # imputeManufactured(X_train)
-    # imputeManufactured(X_val)
-    
-    # #Dates cannot be fitted into the regression model we need to extract the useful feature of the dates 
-    # #For our context, I'm just using the year for now 
-    # filterYearsRegDateLifespan(X_train)
-    # filterYearsRegDateLifespan(X_val)
-    
-    # X_train.to_pickle("train.pkl")
-    # X_val.to_pickle("val.pkl")
-    
-    # #Imputation End
-    
-    # #Scale the data (Useful for KNN and Linear Regression models?)
-    # scaler = MinMaxScaler()
-    
-    # X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
-    # X_val_scaled = pd.DataFrame(scaler.transform(X_val), columns=X_val.columns)
-    
-    # X_train_scaled.to_pickle("train_scaled.pkl")
-    # X_val_scaled.to_pickle("val_scaled.pkl")
     
 
 #This function takes in the amount of coe left in months and calculates the parf rebate
