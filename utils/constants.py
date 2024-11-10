@@ -1,5 +1,5 @@
-local_path = "/Users/melloo21/Desktop/NUS Items/CS5228/Project/CS5228_project"
-folder= "processed_dataset"
+local_path = "."
+folder= "dataset"
 train_dataset = "train_data_cleaned.csv"
 val_dataset= "val_data_cleaned.csv"
 

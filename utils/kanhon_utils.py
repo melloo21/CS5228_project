@@ -276,9 +276,6 @@ class CategoryParser(BaseEstimator, TransformerMixin):
         # Concatenate the new category features with the original DataFrame
         X_transformed = pd.concat([X_transformed, category_dummies], axis=1)
 
-        # Optionally, drop the original 'category' column
-        # X_transformed = X_transformed.drop(columns=[self.column])
-
         return X_transformed
 
     def _parse_categories(self, category_string):

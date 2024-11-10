@@ -9,7 +9,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
 from sklearn.preprocessing import Normalizer, MaxAbsScaler, MinMaxScaler, StandardScaler, QuantileTransformer, RobustScaler, PowerTransformer
 from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error, r2_score, median_absolute_error,mean_absolute_percentage_error,mean_absolute_error, max_error
-
+import xgboost as xgb
 # REF: SCALERS -- https://medium.com/@daython3/scaling-your-data-using-scikit-learn-scalers-3d4b584107d7
 
 ## Flags
@@ -21,8 +21,9 @@ random_state = 0
 impute_max_iter= 10
 scale_flag = False
 scaler_type = "minmax"
-model_type = "gb"
-features = [ 'power', 'depreciation', 'dereg_value', 'omv', 'arf','cylinder_cnt','road_tax','engine_cap','mileage','car_age']
+model_type = "xgb"
+features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
+       'engine_cap', 'depreciation', 'mileage', 'no_of_owners']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
 svr_kernel = 'poly'
@@ -51,8 +52,8 @@ model_choice  = {
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
             'gb': ensemble.GradientBoostingRegressor(),
-            "svr": svm.SVR(kernel=svr_kernel ,degree=2),
-            # "lgb":  lgb.LGBMRegressor()
+            "svr": svm.SVR(kernel=svr_kernel ),
+            "xgb": xgb.XGBRegressor(),
         }
 
 # Do switching
@@ -93,7 +94,7 @@ if scale_flag:
 
 X_train = train_df[features]
 y_train = train_df['price']
-
+print(X_train.dtypes, y_train.dtype)
 X_val = val_df[features]
 y_val = val_df['price']
 
