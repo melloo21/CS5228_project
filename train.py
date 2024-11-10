@@ -1,6 +1,7 @@
 import pandas as pd
+# import lightgbm as lgb
 from utils.constants import *
-from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold, train_test_split
 from sklearn.model_selection import cross_validate, cross_val_score
 from sklearn import ensemble, svm, tree, linear_model
 from sklearn.neighbors import KNeighborsRegressor
@@ -13,18 +14,18 @@ from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error,
 
 ## Flags
 raw_data=False
-impute_type = "simple"
+impute_type = "KNN"
 impute_strategy = "median" # mean, median, most_frequent, constant, Callable 
-impute_neighbours = 5
-randome_state = 0
+impute_neighbours = 30
+random_state = 0
 impute_max_iter= 10
+scale_flag = False
 scaler_type = "minmax"
-model_type = "decision_tree"
-features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
-       'engine_cap', 'depreciation', 'mileage', 'no_of_owners']
+model_type = "gb"
+features = [ 'power', 'depreciation', 'dereg_value', 'omv', 'arf','cylinder_cnt','road_tax','engine_cap','mileage','car_age']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
-svr_kernel = 'rbf'
+svr_kernel = 'poly'
 # Fold types
 # kf = KFold(n_splits=5, shuffle=True, random_state=42)
 # skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -41,7 +42,7 @@ scaler_choice = {
 impute_choice = {
     "simple" : SimpleImputer(strategy=impute_strategy),
     "KNN" : KNNImputer(n_neighbors=impute_neighbours),
-    "iterative": IterativeImputer(max_iter=impute_max_iter, random_state=randome_state)
+    "iterative": IterativeImputer(max_iter=impute_max_iter, random_state=random_state)
 }
 
 model_choice  = {
@@ -50,7 +51,8 @@ model_choice  = {
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
             'gb': ensemble.GradientBoostingRegressor(),
-            "svr": svm.SVR(kernel=svr_kernel )
+            "svr": svm.SVR(kernel=svr_kernel ,degree=2),
+            # "lgb":  lgb.LGBMRegressor()
         }
 
 # Do switching
@@ -84,9 +86,10 @@ model = model_choice[model_type]
 train_df[features] = imputer.fit_transform(train_df[features])
 val_df[features] = imputer.transform(val_df[features])
 
-# Fit and transform the numerical columns
-train_df[features] = scaler.fit_transform(train_df[features])
-val_df[features] = scaler.transform(val_df[features])
+if scale_flag:
+    # Fit and transform the numerical columns
+    train_df[features] = scaler.fit_transform(train_df[features])
+    val_df[features] = scaler.transform(val_df[features])
 
 X_train = train_df[features]
 y_train = train_df['price']
