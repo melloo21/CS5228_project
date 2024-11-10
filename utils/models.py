@@ -2,13 +2,15 @@ import joblib
 import numpy as np
 import datetime as dt
 from typing import Union
+
 from sklearn import ensemble, svm, tree, linear_model
 from sklearn.model_selection import GridSearchCV, RepeatedKFold, KFold, StratifiedKFold
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsRegressor
 
+# import xgboost as xgb
 # Fold references: https://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
 
-class Classification:
+class Regression:
     def __init__(self)-> None:
         super().__init__()
 
@@ -45,15 +47,16 @@ class Classification:
         model_name:str
     ):
         # To initialise the model
-        classifiers = {
-            "decision_tree": tree.DecisionTreeClassifier(),
-            "random_forest": ensemble.RandomForestClassifier(),
+        regressors = {
+            "decision_tree": tree.DecisionTreeRegressor(),
+            "random_forest": ensemble.RandomForestRegressor(),
             "svc":svm.SVC(),
-            "lr": linear_model.LogisticRegression(),
-            "knn": KNeighborsClassifier()
-
+            "lr": linear_model.LinearRegression(),
+            "knn": KNeighborsRegressor(),
+            # 'xgb': xgb.XGBRegressor(),
+            "svr": svm.SVR()
         }
-        return classifiers[model_name]
+        return regressors[model_name]
 
     def hyperparameter_tuning(
         self,
@@ -90,7 +93,7 @@ class Classification:
                 kfold_type=kfold_type,
                 n_splits=n_splits
             ),
-            n_jobs=-1,
+            n_jobs=5,
             refit=True
         ).fit(x_train , y_train )
 

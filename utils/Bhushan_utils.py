@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from sklearn.base import BaseEstimator, TransformerMixin
-
-
+from sklearn.preprocessing import PowerTransformer
+from scipy.stats import boxcox
 
 class DepreciationImputer(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -81,3 +81,20 @@ def calc_vehicle_age(df):
     df['car_age'] = current_year - df['manufactured']
 
     return df
+
+def transform_YeoJohnson(df, features):
+    transformed_df = df.copy()
+    yeo_johnson = PowerTransformer(method='yeo-johnson')
+    transformed_df[features] = yeo_johnson.fit_transform(transformed_df[features])
+
+    return transformed_df
+
+def transform_BoxCox(df, features):
+    transformed_df = df.copy()
+    for feature in features:
+        if (transformed_df[feature] <= 0).any():
+            transformed_df[feature]
+        
+        transformed_df[feature], _ = boxcox(transformed_df[feature])
+    
+    return transformed_df
