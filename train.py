@@ -22,11 +22,15 @@ random_state = 0
 impute_max_iter= 10
 scale_flag = False
 scaler_type = "minmax"
-model_type = "random_forest"
-features = [ 'power', 'depreciation', 'dereg_value', 'omv', 'arf','cylinder_cnt','road_tax','engine_cap','mileage','car_age']
+model_type = "svr"
+features = ['power', 'depreciation', 'dereg_value', 'arf','type_of_vehicle_bus/mini bus', 'type_of_vehicle_hatchback',
+       'type_of_vehicle_luxury sedan', 'type_of_vehicle_mid-sized sedan',
+       'type_of_vehicle_mpv', 'type_of_vehicle_others',
+       'type_of_vehicle_sports car', 'type_of_vehicle_stationwagon',
+       'type_of_vehicle_suv', 'type_of_vehicle_truck', 'type_of_vehicle_van']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
-svr_kernel = 'poly'
+svr_kernel = 'rbf'
 
 # Fold types
 # kf = KFold(n_splits=5, shuffle=True, random_state=42)

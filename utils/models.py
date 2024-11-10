@@ -56,6 +56,7 @@ class Regression:
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
             "svr": svm.SVR(),
+            'gb': ensemble.GradientBoostingRegressor()
             # 'xgb': xgb.XGBRegressor(),
             # "lgb":  lgb.LGBMRegressor()
         }
