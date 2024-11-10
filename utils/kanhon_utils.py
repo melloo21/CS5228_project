@@ -384,7 +384,17 @@ class FeatureTransformer():
         # self.yeo_johnson_fn =  PowerTransformer(method='yeo-johnson')
 
     def fit_transform(self, feature_values):
-        self.transformations['original'] = feature_values
+        '''
+        Input:
+        Feature_values: pandas.core.series.Series - takes in a Series with data to be transformed
+
+        Output:
+        best_transform: str - best transform method
+        self.transformations[best_transform]: dict() - transformed values in np.array
+        self.transformation_functions[best_transform] - fitted transform function
+ 
+        '''
+        # self.transformations['original'] = feature_values
         # Log Transformation (only for positive values)
         if (feature_values > 0).all():
             self.transformations['Log'] = self.transformation_functions['Log'].fit_transform(feature_values.values.reshape(-1, 1)).flatten()
@@ -422,6 +432,13 @@ class FeatureTransformer():
             return None, None, None
             
     def apply_best_transform(self, feature_values):
+        '''
+        Input:
+        Feature_values: pandas.core.series.Series - takes in a Series with data to be transformed
+
+        Output:
+        transformed_values: np.array - transformed values 
+        '''
         best_transform, best_transformation_val, best_transformation_fn = self.get_best_transform()
         print(f"Applying {best_transform}...")
         if best_transform == 'Square Root':
