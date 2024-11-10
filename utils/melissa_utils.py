@@ -2,7 +2,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from typing import Any
+from typing import Any, Union
 
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.preprocessing import LabelEncoder,OneHotEncoder
@@ -165,3 +165,12 @@ def onehot_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle")
     
     return pd.concat([df, encoded_df], axis=1)
 
+def generic_outlier(df:pd.DataFrame, column_name:str, min_val:Union[float,None], max_val:Union[float,None]):
+    proc_df = df.copy()
+    orig_na = proc_df[column_name].isna().sum()
+    if min_val:
+        proc_df[column_name] = proc_df[column_name].where(proc_df[column_name] > min_val, np.nan)
+    if max_val:
+        proc_df[column_name] = proc_df[column_name].where(proc_df[column_name] < max_val, np.nan)
+    print(f" For {column_name} column :: Found {proc_df[column_name].isna().sum() - orig_na} outliers")
+    return proc_df
