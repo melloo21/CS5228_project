@@ -1,7 +1,9 @@
 local_path = "/Users/melloo21/Desktop/NUS Items/CS5228/Project/CS5228_project"
 folder= "processed_dataset"
-train_dataset = "train_data_cleaned.csv"
-val_dataset= "val_data_cleaned.csv"
+# train_dataset = "train_data_cleaned.csv"
+# val_dataset= "val_data_cleaned.csv"
+train_dataset = "train_data_wo_simple_imputer.csv"
+val_dataset= "val_data_wo_simple_imputer.csv"
 
 ENTIRE_FEATURE_LIST = ['listing_id', 'title', 'make', 'model', 'description', 'manufactured',
        'original_reg_date', 'reg_date', 'type_of_vehicle', 'category',

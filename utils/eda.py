@@ -272,6 +272,74 @@ class mileageImputer():
         self.fit(df)
         return self.transform(df, strategy)
 
+class mileageImputerByType():
+    mean = None
+    median = None
+    mode = None 
+    
+    def __init__(self):
+        self.mean_per_type = {}
+        self.median_per_type = {}
+        self.mode_per_type = {}
+    
+    #Calculates the value of amount of mileage per month of use 
+    def fit(self, df):
+        for vehicle_type in df['type_of_vehicle'].unique():
+            type_df = df[df['type_of_vehicle'] == vehicle_type].copy().reset_index(drop=True)
+            rows = type_df[type_df["mileage"].notna()].index
+            
+            accumulated = []
+
+            # Calculate mileage per month for each row in this vehicle type
+            for r in rows:
+                row = type_df.iloc[r]
+                reg_date = row["reg_date"]
+                mileage = row["mileage"]
+                months = calculateDateDiff(reg_date)
+                
+                if months > 0:  # Avoid division by zero
+                    mileage_per_month = mileage / months
+                    accumulated.append(mileage_per_month)
+            
+            # Calculate and store mean, median, mode for this vehicle type
+            if len(accumulated) > 0:
+                self.mean_per_type[vehicle_type] = np.mean(accumulated)
+                self.median_per_type[vehicle_type] = np.median(accumulated)
+                mode_result = stats.mode(accumulated, axis=None, keepdims=False)
+                self.mode_per_type[vehicle_type] = mode_result.mode
+
+                print(f"[{vehicle_type}] Miles per month -> Mean: {self.mean_per_type[vehicle_type]}, Median: {self.median_per_type[vehicle_type]}, Mode: {self.mode_per_type[vehicle_type]}")
+            else:
+                # Fallback in case no mileage data is available for a type
+                self.mean_per_type[vehicle_type] = 0
+                self.median_per_type[vehicle_type] = 0
+                self.mode_per_type[vehicle_type] = 0
+                print(f"WARN: {vehicle_type} is missing ")
+
+    def transform(self, df, strategy="mean"):
+        if strategy != "mean" and strategy != "median" and strategy != "mode":
+            raise ValueError("transform() - strategy only accepts mean, median and mode")
+        proc_df = df.copy().reset_index(drop=True)
+        rows = proc_df[proc_df["mileage"].isna()].index
+
+        for r in rows:
+            row = proc_df.iloc[r]
+            reg_date = row["reg_date"]
+            months = calculateDateDiff(reg_date)
+            vehicle_type = row["type_of_vehicle"]
+            
+            if strategy == "mean":
+                proc_df.loc[r, "mileage"] = months * self.mean_per_type[vehicle_type]
+            elif strategy == "median":
+                proc_df.loc[r, "mileage"] = months * self.median_per_type[vehicle_type]
+            elif strategy == "mode":
+                proc_df.loc[r, "mileage"] = months * self.mode_per_type[vehicle_type]
+        return proc_df
+
+    def fit_transform(self, df, strategy="mean"):
+        self.fit(df)
+        return self.transform(df, strategy)
+
 def main():
     print(f"Reading csv...")
     proc_df = pd.read_csv(train)

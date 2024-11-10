@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from sklearn.base import BaseEstimator, TransformerMixin
-
+from scipy.stats import boxcox, skew
+from sklearn.preprocessing import PowerTransformer
 
 
 class DepreciationImputer(BaseEstimator, TransformerMixin):
@@ -113,3 +114,23 @@ def cap_coe_outliers(X):
     )
 
     return X
+
+def apply_transformations(feature_values):
+    transformations = {}
+    transformations['original'] = feature_values
+    # Log Transformation (only for positive values)
+    if (feature_values > 0).all():
+        transformations['Log'] = np.log1p(feature_values)
+    else:
+        transformations['Log'] = None
+    # Square-root Transformation
+    transformations['Square Root'] = np.sqrt(feature_values.clip(0))
+    # Box-Cox Transformation (only for positive values)
+    if (feature_values > 0).all():
+        transformations['Box-Cox'], _ = boxcox(feature_values + 1e-6)
+    else:
+        transformations['Box-Cox'] = None
+    # Yeo-Johnson Transformation
+    yeo_johnson = PowerTransformer(method='yeo-johnson')
+    transformations['Yeo-Johnson'] = yeo_johnson.fit_transform(feature_values.values.reshape(-1, 1)).flatten()
+    return transformations

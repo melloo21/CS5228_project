@@ -1,4 +1,5 @@
 import pandas as pd
+# import xgboost as xgb
 # import lightgbm as lgb
 from utils.constants import *
 from sklearn.model_selection import KFold, StratifiedShuffleSplit,ShuffleSplit, StratifiedKFold, train_test_split
@@ -16,16 +17,17 @@ from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error,
 raw_data=False
 impute_type = "KNN"
 impute_strategy = "median" # mean, median, most_frequent, constant, Callable 
-impute_neighbours = 30
+impute_neighbours = 5
 random_state = 0
 impute_max_iter= 10
 scale_flag = False
 scaler_type = "minmax"
-model_type = "gb"
+model_type = "random_forest"
 features = [ 'power', 'depreciation', 'dereg_value', 'omv', 'arf','cylinder_cnt','road_tax','engine_cap','mileage','car_age']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
 svr_kernel = 'poly'
+
 # Fold types
 # kf = KFold(n_splits=5, shuffle=True, random_state=42)
 # skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -54,6 +56,10 @@ model_choice  = {
             "svr": svm.SVR(kernel=svr_kernel ,degree=2),
             # "lgb":  lgb.LGBMRegressor()
         }
+
+transformer = {
+    
+}
 
 # Do switching
 if raw_data:
