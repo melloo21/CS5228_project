@@ -2,10 +2,10 @@ local_path = "/Users/melloo21/Desktop/NUS Items/CS5228/Project/CS5228_project"
 folder= "processed_dataset"
 # train_dataset = "train_data_cleaned.csv"
 # val_dataset= "val_data_cleaned.csv"
-# train_dataset = "train_wo_simple_imputer_with_outlier_removed.csv"
-# val_dataset= "val_wo_simple_imputer_with_outlier_removed.csv"
-train_dataset = "train_w_outlier_knn_impute_ft_transform.csv"
-val_dataset= "val_w_outlier_knn_impute_ft_transform.csv"
+train_dataset = "train_wo_simple_imputer_with_outlier_removed.csv"
+val_dataset= "val_wo_simple_imputer_with_outlier_removed.csv"
+# train_dataset = "train_w_outlier_knn_impute_ft_transform.csv"
+# val_dataset= "val_w_outlier_knn_impute_ft_transform.csv"
 
 VEHICLE_CATEGORIES = [
     {"sports car"},
