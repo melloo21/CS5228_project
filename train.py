@@ -27,7 +27,7 @@ features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_a
        'engine_cap', 'depreciation', 'mileage', 'no_of_owners']
 CV_FOLDS = 5
 # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
-svr_kernel = 'poly'
+svr_kernel = 'rbf'
 
 # Fold types
 # kf = KFold(n_splits=5, shuffle=True, random_state=42)

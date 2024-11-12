@@ -113,3 +113,53 @@ class GenericSGCarMartImputer:
         
         # Merge df with variable_df on listing id
         return df.apply(self.impute_if_missing,axis=1, variable=variable, ref_df=ref_df)
+
+class VehicleCondensedEncoder:
+    def __init__(self):
+        pass
+
+    def encoding_vehicle_type_custom(self,type_of_vehicle: str):
+        """
+        Groups the different types of vehicles into a smaller number
+        of categories to handle sparsity issues by assigning a number
+        to each meso-group of vehicles. After this has been
+        run, the column should be made categorical
+        """
+        VEHICLE_CATEGORIES = [
+        {"sports car"},
+        {"luxury sedan", "suv"},
+        {"hatchback", "stationwagon", "mid-sized sedan"},
+        {"others", "mpv"},
+        ]
+
+        if not type_of_vehicle or not isinstance(type_of_vehicle, str):
+            type_of_vehicle = "others"
+
+        for cat_num, cat in enumerate(VEHICLE_CATEGORIES, start=1):
+            if type_of_vehicle in cat:
+                return cat_num
+
+        return 0
+
+    def get_condensed(self, df:pd.DataFrame):
+        df["cond_vehicle_type"] = df["type_of_vehicle"].apply(lambda x: vehicle_type_to_cat_num(x))
+        return df
+
+    def fit(self, df:pd.DataFrame, column_name:str="cond_vehicle_type"):
+        proc_df = df.copy().reset_index(drop=True)
+        proc_df = self.get_condensed(proc_df)
+        encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')       
+        self.encoder = encoder.fit(proc_df[[column_name]])
+
+    def transform(self, df:pd.DataFrame, column_name:str="cond_vehicle_type"):
+        
+        proc_df = df.copy().reset_index(drop=True)
+        proc_df = self.get_condensed(proc_df)
+        encoded_data = self.encoder.transform(proc_df[[column_name]])
+        encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out([column_name]))
+        
+        return pd.concat([df, encoded_df], axis=1)
+
+    def fit_transform(self, df):
+        self.fit(df)
+        return self.transform(df)
