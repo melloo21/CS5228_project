@@ -511,10 +511,86 @@ def NoSimpleImputers_OutliersRemoved(orig_df, test_df, args_method):
 
     print(train_df, val_df, test_df)
 
+def NoSimpleImputers_OutliersRemoved_NoFeatureTransform(orig_df, test_df, args_method):
+    
+    name = args_method
+    orig_df = outlier_processing(orig_df)
+    ## Split into train val split
+    train_df, val_df = train_test_split(orig_df, test_size=0.2, random_state=42, shuffle=True)
+    
+    train_df, val_df, test_df = coe_outlier_processing(train_df, val_df, test_df)
+    
+    train_df, val_df, test_df = make_model_imputer(train_df, val_df, test_df)
+
+    train_df, val_df, test_df = coe_age_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = agerangeprocessor(train_df, val_df, test_df)
+    train_df, val_df, test_df = car_age_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = manufactured_date_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = vehicle_cond_encoder(train_df, val_df, test_df)
+    # train_df, val_df, test_df = vehicle_one_hot_encoder(train_df, val_df, test_df)
+    train_df, val_df, test_df = curb_weight_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = power_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = engine_cap_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = owner_cnt_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = depreciation_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = transmission_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = mileage_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = omv_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = fuel_type_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = cylinder_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = category_parser(train_df, val_df, test_df)
+    train_df, val_df, test_df = co2_emission_imputer(train_df, val_df, test_df, simple_impute=False)
+    train_df, val_df, test_df = numeric_imputer(train_df, val_df, test_df, impute_type = "KNN", impute_neighbours=5)
+    # features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'emission_data' ,\
+    # 'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured']
+    # train_df, val_df, test_df = feature_transform(train_df, val_df, test_df, features=features)
+    save_dataset(train_df, val_df, test_df, name)
+
+    print(train_df, val_df, test_df)
+
+def SimpleImputers_OutliersRemoved_NoVehCond(orig_df, test_df, args_method):
+    simple_impute = True
+    name = args_method
+    orig_df = outlier_processing(orig_df)
+    ## Split into train val split
+    train_df, val_df = train_test_split(orig_df, test_size=0.2, random_state=42, shuffle=True)
+    
+    train_df, val_df, test_df = coe_outlier_processing(train_df, val_df, test_df)
+    
+    train_df, val_df, test_df = make_model_imputer(train_df, val_df, test_df)
+
+    train_df, val_df, test_df = coe_age_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = agerangeprocessor(train_df, val_df, test_df)
+    train_df, val_df, test_df = car_age_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = manufactured_date_imputer(train_df, val_df, test_df)
+    # train_df, val_df, test_df = vehicle_cond_encoder(train_df, val_df, test_df)
+    train_df, val_df, test_df = vehicle_one_hot_encoder(train_df, val_df, test_df)
+    train_df, val_df, test_df = curb_weight_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = power_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = engine_cap_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = owner_cnt_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = depreciation_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = transmission_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = mileage_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = omv_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = fuel_type_imputer(train_df, val_df, test_df)
+    train_df, val_df, test_df = cylinder_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = category_parser(train_df, val_df, test_df)
+    train_df, val_df, test_df = co2_emission_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = numeric_imputer(train_df, val_df, test_df, impute_type = "KNN", impute_neighbours=5)
+    features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'emission_data' ,\
+    'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured']
+    train_df, val_df, test_df = feature_transform(train_df, val_df, test_df, features=features)
+    save_dataset(train_df, val_df, test_df, name)
+
+    print(train_df, val_df, test_df)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Data Preprocessing Script with Multiple Methods')
-    parser.add_argument('--method', type=str, choices=['SimpleImputers_OutliersRemoved', 'method2'], default='SimpleImputers_OutliersRemoved',
-                        help='Choose preprocessing method: "SimpleImputers_OutliersRemoved" or "method2"')
+    parser.add_argument('--method', type=str, choices=['SimpleImputers_OutliersRemoved', 'NoSimpleImputers_OutliersRemoved', \
+                                                       'NoSimpleImputers_OutliersRemoved_NoFeatureTransform', 'SimpleImputers_OutliersRemoved_NoVehCond'], default='SimpleImputers_OutliersRemoved',
+                        help='Choose preprocessing method: "SimpleImputers_OutliersRemoved" or "NoSimpleImputers_OutliersRemoved"')
     args = parser.parse_args()
 
 
@@ -535,11 +611,20 @@ def main():
     if args.method == 'SimpleImputers_OutliersRemoved':
         print("Running preprocessing method SimpleImputers_OutliersRemoved")
         orig_df = SimpleImputers_OutliersRemoved(orig_df, test_df, args.method)
-    # elif args.method == 'method2':
-        # print("Running preprocessing method 2")
-        # orig_df = preprocessing_method_2(orig_df)
+
+    elif args.method == 'NoSimpleImputers_OutliersRemoved':
+        print("Running preprocessing NoSimpleImputers_OutliersRemoved")
+        orig_df = NoSimpleImputers_OutliersRemoved(orig_df, test_df, args.method)
+
+    elif args.method == 'SimpleImputers_OutliersRemoved_NoVehCond':
+        print("Running preprocessing SimpleImputers_OutliersRemoved_NoVehCond")
+        orig_df = SimpleImputers_OutliersRemoved_NoVehCond(orig_df, test_df, args.method)
+
+    elif args.method == 'NoSimpleImputers_OutliersRemoved_NoFeatureTransform':
+        print("Running preprocessing NoSimpleImputers_OutliersRemoved_NoFeatureTransform")
+        orig_df = NoSimpleImputers_OutliersRemoved_NoFeatureTransform(orig_df, test_df, args.method)
     else:
-        print("Invalid method selected. Please choose 'method1' or 'method2'.")
+        print("Invalid method selected. Please choose 'SimpleImputers_OutliersRemoved' or 'NoSimpleImputers_OutliersRemoved'.")
         return
 
 if __name__ == "__main__":

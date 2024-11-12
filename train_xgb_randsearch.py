@@ -13,6 +13,7 @@ from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error,
 import xgboost as xgb
 from sklearn.model_selection import RandomizedSearchCV,GridSearchCV
 from sklearn.metrics import make_scorer, mean_squared_error
+import pickle
 
 # REF: SCALERS -- https://medium.com/@daython3/scaling-your-data-using-scikit-learn-scalers-3d4b584107d7
 
@@ -26,21 +27,23 @@ from sklearn.metrics import make_scorer, mean_squared_error
 # scale_flag = False
 # scaler_type = "minmax"
 # model_type = "xgb"
+save_model = True
+full_search = True
 features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
        'engine_cap', 'depreciation', 'mileage', 'no_of_owners', 
-            'cond_vehicle_type_0',	'cond_vehicle_type_1',	'cond_vehicle_type_2',	
-            'cond_vehicle_type_3',	'cond_vehicle_type_4',
-       #      'type_of_vehicle_bus/mini bus', 'type_of_vehicle_hatchback',
-       # 'type_of_vehicle_luxury sedan', 'type_of_vehicle_mid-sized sedan',
-       # 'type_of_vehicle_mpv', 'type_of_vehicle_others',
-       # 'type_of_vehicle_sports car', 'type_of_vehicle_stationwagon',
-       # 'type_of_vehicle_suv', 'type_of_vehicle_truck',
+            # 'cond_vehicle_type_0',	'cond_vehicle_type_1',	'cond_vehicle_type_2',	
+            # 'cond_vehicle_type_3',	'cond_vehicle_type_4',
+            'type_of_vehicle_bus/mini bus', 'type_of_vehicle_hatchback',
+       'type_of_vehicle_luxury sedan', 'type_of_vehicle_mid-sized sedan',
+       'type_of_vehicle_mpv', 'type_of_vehicle_others',
+       'type_of_vehicle_sports car', 'type_of_vehicle_stationwagon',
+       'type_of_vehicle_suv', 'type_of_vehicle_truck',
         'coe car', 'parf car', 
        'rare & exotic', 'emission_data']
 # CV_FOLDS = 5
 # # {‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’}  , epsilon = 0.1 ,C = 10
 # svr_kernel = 'rbf'
-name = 'SimpleImputers_OutliersRemoved'
+name = 'SimpleImputers_OutliersRemoved_NoVehCond'
 train_dir = rf'./processed_dataset/train_{name}.csv'
 val_dir = rf'./processed_dataset/val_{name}.csv'
 
@@ -56,28 +59,38 @@ y_val = val_df['price'].values
 ### Grid Search ###
 param_grid = {
     'learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'max_depth': [3, 5, 7, 10],
-    'n_estimators': [100, 200, 500],
-    'subsample': [0.6, 0.8, 1.0],
-    'colsample_bytree': [0.6, 0.8, 1.0],
-    'reg_alpha': [0, 0.1, 0.5, 1],  # L1 regularization
-    'reg_lambda': [1, 1.5, 2, 3],    # L2 regularization
+    # 'max_depth': [3, 5, 7, 10],
+    # 'n_estimators': [100, 200, 500],
+    # 'subsample': [0.6, 0.8, 1.0],
+    # 'colsample_bytree': [0.6, 0.8, 1.0],
+    # 'reg_alpha': [0, 0.1, 0.5, 1],  # L1 regularization
+    # 'reg_lambda': [1, 1.5, 2, 3],    # L2 regularization
 }
 
 # Initialize XGBRegressor
 xgb_reg = xgb.XGBRegressor(objective="reg:squarederror", random_state=42)
 
-# Set up the randomized search with RMSE as the scoring metric
-random_search = RandomizedSearchCV(
-    estimator=xgb_reg,
-    param_distributions=param_grid,
-    n_iter=250,  # Number of parameter settings to sample
-    scoring=make_scorer(root_mean_squared_error, greater_is_better=False),  # Negative RMSE for maximizing
-    cv=3,
-    verbose=1,
-    n_jobs=-1,
-    random_state=42
-)
+if full_search:
+    random_search = GridSearchCV(
+        estimator=xgb_reg,
+        param_grid=param_grid,
+        scoring=make_scorer(root_mean_squared_error, greater_is_better=False),  # Negative RMSE for maximizing,
+        n_jobs=14,
+        cv=5,
+        verbose=1,
+    )
+else:
+    # Set up the randomized search with RMSE as the scoring metric
+    random_search = RandomizedSearchCV(
+        estimator=xgb_reg,
+        param_distributions=param_grid,
+        n_iter=250,  # Number of parameter settings to sample
+        scoring=make_scorer(root_mean_squared_error, greater_is_better=False),  # Negative RMSE for maximizing
+        cv=3,
+        verbose=1,
+        n_jobs=-1,
+        random_state=42
+    )
 
 # Fit the random search model
 random_search.fit(X_train, y_train)
@@ -121,5 +134,6 @@ print("holdout_mae: %f" % holdout_mae)
 print("holdout_max_error: %f" % holdout_max_error)
 print("holdout_mape: %f" % holdout_mape)
 
-
-
+## saving model
+if save_model:
+    pickle.dump(best_xgb, open(r"./model_assets/xgb.pkl", "wb"))
