@@ -59,12 +59,12 @@ y_val = val_df['price'].values
 ### Grid Search ###
 param_grid = {
     'learning_rate': [0.01, 0.05, 0.1, 0.2],
-    # 'max_depth': [3, 5, 7, 10],
-    # 'n_estimators': [100, 200, 500],
-    # 'subsample': [0.6, 0.8, 1.0],
-    # 'colsample_bytree': [0.6, 0.8, 1.0],
-    # 'reg_alpha': [0, 0.1, 0.5, 1],  # L1 regularization
-    # 'reg_lambda': [1, 1.5, 2, 3],    # L2 regularization
+    'max_depth': [3, 5, 7, 10],
+    'n_estimators': [200, 500, 1000, 1500],
+    'subsample': [0.6, 0.8, 1.0],
+    'colsample_bytree': [0.6, 0.8, 1.0],
+    'reg_alpha': [0, 0.1, 0.5, 1],  # L1 regularization
+    'reg_lambda': [1, 1.5, 2, 3],    # L2 regularization
 }
 
 # Initialize XGBRegressor
@@ -136,4 +136,5 @@ print("holdout_mape: %f" % holdout_mape)
 
 ## saving model
 if save_model:
-    pickle.dump(best_xgb, open(r"./model_assets/xgb.pkl", "wb"))
+    # pickle.dump(best_xgb, open(r"./model_assets/xgb.pkl", "wb"))
+    pickle.dump(best_xgb, open(rf"C:/Users/kan_h/Desktop/Kan Hon/Admin/NUS MComp/AY2425_Sem1/CS5228/cs5228-project/CS5228_project/model_assets/xgb_{name}.pkl", "wb"))
