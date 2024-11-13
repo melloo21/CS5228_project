@@ -30,7 +30,7 @@ import pickle
 save_model = True
 full_search = True
 features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
-       'engine_cap', 'depreciation', 'mileage', 'no_of_owners', 
+       'engine_cap',  'mileage', 'no_of_owners', 
             # 'cond_vehicle_type_0',	'cond_vehicle_type_1',	'cond_vehicle_type_2',	
             # 'cond_vehicle_type_3',	'cond_vehicle_type_4',
             'type_of_vehicle_bus/mini bus', 'type_of_vehicle_hatchback',
@@ -58,12 +58,12 @@ y_val = val_df['price'].values
 
 ### Grid Search ###
 param_grid = {
-    'learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'max_depth': [3, 5, 7, 10],
-    'n_estimators': [200, 500, 1000, 1500],
+    'learning_rate': [ 0.05, 0.1, 0.2],
+    'max_depth': [3, 5, 7],
+    'n_estimators': [500, 1000, 1500],
     'subsample': [0.6, 0.8, 1.0],
     'colsample_bytree': [0.6, 0.8, 1.0],
-    'reg_alpha': [0, 0.1, 0.5, 1],  # L1 regularization
+    'reg_alpha': [0.1, 0.5, 1],  # L1 regularization
     'reg_lambda': [1, 1.5, 2, 3],    # L2 regularization
 }
 
@@ -84,7 +84,7 @@ else:
     random_search = RandomizedSearchCV(
         estimator=xgb_reg,
         param_distributions=param_grid,
-        n_iter=250,  # Number of parameter settings to sample
+        n_iter=500,  # Number of parameter settings to sample
         scoring=make_scorer(root_mean_squared_error, greater_is_better=False),  # Negative RMSE for maximizing
         cv=3,
         verbose=1,
