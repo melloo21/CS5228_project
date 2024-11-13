@@ -133,9 +133,9 @@ def encoding_vehicle_type_custom(type_of_vehicle: str):
     """
     VEHICLE_CATEGORIES = [
     {"sports car"},
-    {"luxury sedan", "suv"},
+    {"luxury sedan", "suv", "mpv"},
     {"hatchback", "stationwagon", "mid-sized sedan"},
-    {"others", "mpv"},
+    {"others","van" },
     ]
 
     if not type_of_vehicle or not isinstance(type_of_vehicle, str):
@@ -224,7 +224,7 @@ class VehicleCondensedEncoder:
         encoded_data = self.encoder.transform(proc_df[[column_name]])
         encoded_df = pd.DataFrame(encoded_data, columns=self.encoder.get_feature_names_out([column_name]))
         
-        return pd.concat([df, encoded_df], axis=1)
+        return pd.concat([proc_df, encoded_df], axis=1)
 
     def fit_transform(self, df):
         self.fit(df)
