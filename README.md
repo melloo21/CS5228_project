@@ -16,8 +16,10 @@ conda env create -f environment.yml
 ```{bash}
 python dataset_preprocessing.py --method SimpleImputers_OutliersRemoved_NoVehCond
 ```
+2. Feature Engineering/Selection and Model Selection
+- feature_model_selection.ipynb: Includes the visualisation plots of feature transformation, feature selection methods and the learning curves to select the model
 
-2. Model training
+3. Model training
 - We use GuildAI to track and monitor each run's progress. For each model that were deemed promising using the learning curve approach, we run GridSearch to identify the best set of hyperparameters.
 
 For XGB grid search:
@@ -38,6 +40,13 @@ For Gradient Boosted Trees grid search:
 guild run train_gbtrees.py
 ```
 
-3. Model Explanability:
+4. Model Explanability:
 
 - Model Explanability.ipynb: Includes the scripts used for final model training, code submission and model explanability using SHAP and LIME methods. 
+
+
+## Folders
+- model_assets: collection of best model weights
+- processed_dataset: collection of preprocessed csv that is obtained via running data_processing.py
+- superceeded_notebooks: rough working, function testing and sanity check
+- utils: utility functions required for data preprocessing, modelling and model evaluation
