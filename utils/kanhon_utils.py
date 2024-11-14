@@ -7,6 +7,12 @@ from utils.sgcarmart_scraper import get_emission_data
 import os
 from tqdm import tqdm
 
+from utils.constants import *
+from scipy.stats import boxcox, skew
+from sklearn.preprocessing import PowerTransformer, FunctionTransformer
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 ### make model imputation ###
 def extract_make(title, compiled_regex):
     """
@@ -276,9 +282,6 @@ class CategoryParser(BaseEstimator, TransformerMixin):
         # Concatenate the new category features with the original DataFrame
         X_transformed = pd.concat([X_transformed, category_dummies], axis=1)
 
-        # Optionally, drop the original 'category' column
-        # X_transformed = X_transformed.drop(columns=[self.column])
-
         return X_transformed
 
     def _parse_categories(self, category_string):
@@ -307,8 +310,6 @@ class EmissionImputer():
         if os.path.exists(train_csv_dir):
             self.train_emission_df = pd.read_csv(train_csv_dir)
         else:
-            print('here')
-            return
             self.train_emission_df = self._scrap_emission_data_from_sgcarmart(train_emission_df, train_csv_dir)
             
         # checks if files were scrapped
@@ -372,7 +373,106 @@ class EmissionImputer():
 
         return merged_df
 
+class FeatureTransformer():
+    def __init__(self):
+        self.transformations = {}
+        self.transformation_functions = {"Log": FunctionTransformer(np.log1p), "Square Root": FunctionTransformer(np.sqrt), "Box-Cox": PowerTransformer(method='box-cox'), "Yeo-Johnson": PowerTransformer(method='yeo-johnson')}
+        self.skewness_values = {}
+    # self.log_transform_fn = np.log1p
+        # self.sqrt_fn = np.sqrt
+        # self.boxcox_fn = boxcox
+        # self.yeo_johnson_fn =  PowerTransformer(method='yeo-johnson')
+
+    def fit_transform(self, feature_values):
+        '''
+        Input:
+        Feature_values: pandas.core.series.Series - takes in a Series with data to be transformed
+
+        Output:
+        best_transform: str - best transform method
+        self.transformations[best_transform]: dict() - transformed values in np.array
+        self.transformation_functions[best_transform] - fitted transform function
+ 
+        '''
+        # self.transformations['original'] = feature_values
+        # Log Transformation (only for positive values)
+        if (feature_values > 0).all():
+            self.transformations['Log'] = self.transformation_functions['Log'].fit_transform(feature_values.values.reshape(-1, 1)).flatten()
+        else:
+            self.transformations['Log'] = None
+            
+        # Square-root Transformation
+        self.transformations['Square Root'] = self.transformation_functions['Square Root'].fit_transform(feature_values.clip(0).values.reshape(-1, 1)).flatten()
+
+        # Box-Cox Transformation (only for positive values)
+        if (feature_values > 0).all():
+            self.transformations['Box-Cox'] = self.transformation_functions['Box-Cox'].fit_transform(feature_values.values.reshape(-1, 1) + 1e-6).flatten()
+        else:
+            self.transformations['Box-Cox'] = None
+        # Yeo-Johnson Transformation
+        # yeo_johnson = PowerTransformer(method='yeo-johnson')
+        self.transformations['Yeo-Johnson'] = self.transformation_functions['Yeo-Johnson'].fit_transform(feature_values.values.reshape(-1, 1)).flatten()
+        return self.transformations
+
+    def get_best_transform(self):
         
+        for idx, (transform_name, transformed_values) in enumerate(self.transformations.items()):
+            if transformed_values is not None:
+                skew_val = skew(transformed_values)
+                self.skewness_values[transform_name] = abs(skew_val)
+                # Find the transformation with the lowest skewness
+        if self.skewness_values:
+            best_transform = min(self.skewness_values, key=self.skewness_values.get)
+            print(
+                f"Best transformation is: {best_transform} with skewness {self.skewness_values[best_transform]}"
+            )
+            return best_transform, self.transformations[best_transform], self.transformation_functions[best_transform]
+        else:
+            print("No valid transformations available.")
+            return None, None, None
+            
+    def apply_best_transform(self, feature_values):
+        '''
+        Input:
+        Feature_values: pandas.core.series.Series - takes in a Series with data to be transformed
+
+        Output:
+        transformed_values: np.array - transformed values 
+        '''
+        best_transform, best_transformation_val, best_transformation_fn = self.get_best_transform()
+        print(f"Applying {best_transform}...")
+        if best_transform == 'Square Root':
+            feature_values = feature_values.clip(0)
+        transformed_values = self.transformation_functions[best_transform].transform(feature_values.values.reshape(-1, 1)).flatten()
+        return transformed_values
+
+    def visualize_transformations(self, feature):
+        if not self.transformations:
+            print("Transformations not fitted yet")
+        num_cols = 5
+        fig, axes = plt.subplots(1, num_cols, figsize=(20, 5), constrained_layout=True)
+        fig.suptitle(f'Visualizing output of training set transformation: {feature}', fontsize=16)
+    
+        for idx, (transform_name, transformed_values) in enumerate(self.transformations.items()):
+            ax = axes[idx]
+            if transformed_values is not None:
+                plot_data = pd.DataFrame({
+                    feature: transformed_values,
+                })
+                
+                ax = axes[idx]
+                sns.histplot(data=plot_data, x=feature, bins=30, kde=True,
+                             element='step', ax=ax, alpha=0.7)
+                # Calculate skewness
+                skew_val = self.skewness_values[transform_name]
+                ax.set_title(f'{transform_name}\nSkew: {skew_val:.2f}', fontsize=12)
+                ax.set_xlabel('Value')
+                ax.set_ylabel('Frequency')
+            else:
+                ax.set_visible(False)
+                ax.set_title(f'{transform_name} (Not Applicable)', fontsize=12)
+    
+        plt.show()       
 
 ############################## FORMAT ####################################
 # cylinder_imputer = CylinderImputer()

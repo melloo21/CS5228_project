@@ -2,7 +2,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from typing import Any
+from typing import Any, Union
 
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.preprocessing import LabelEncoder,OneHotEncoder
@@ -23,6 +23,8 @@ def count_missing_rows_for_x_cols(df: pd.DataFrame, column_name: list) -> int:
     missing_count = df[df[column_name].isnull().all(axis=1)].shape[0]
     return missing_count
 
+def retun_numeric_cols(df:pd.DataFrame):
+    return df.select_dtypes(include=['int64', 'float64']).columns
 
 def isnan(value: Any) -> bool:
     """Returns True if value is NaN, otherwise False"""
@@ -93,6 +95,9 @@ def fuel_type_row_extractor(row:pd.Series)->str:
             if find_fuel_type(text,"petrol-electric"):
                 print(f"row pe {text}")
                 return "petrol-electric"
+            if find_fuel_type(text,"hybrid cars"):
+                print(f"row pe {text}")
+                return "petrol-electric"
             # check diesel-electric
             if find_fuel_type(text,"diesel-electric"):
                 print(f"row de {text}")
@@ -128,9 +133,11 @@ def encoding_vehicle_type_custom(type_of_vehicle: str):
     """
     VEHICLE_CATEGORIES = [
     {"sports car"},
-    {"luxury sedan", "suv"},
-    {"others", "mpv", "stationwagon", "mid-sized sedan"},
+    {"luxury sedan", "suv", "mpv"},
+    {"hatchback", "stationwagon", "mid-sized sedan"},
+    {"others","van" },
     ]
+
     if not type_of_vehicle or not isinstance(type_of_vehicle, str):
         type_of_vehicle = "others"
 
@@ -148,18 +155,77 @@ def generic_one_hotencoding(df:pd.DataFrame, column_name:str)->pd.DataFrame:
     
     return pd.concat([df, encoded_df], axis=1)
 
-def vehicle_type_fit_transform(df:pd.DataFrame, column_name:str="type_of_vehicle"):
+def onehot_fit_transform(df:pd.DataFrame, column_name:str="type_of_vehicle"):
     """
     returns encoded vehicle type to the df and the scale
     """
-    encoder = OneHotEncoder(sparse_output=False)
+    encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     encoder.fit(df[[column_name]])
-    return vehicle_type_fit(df, encoder,column_name), encoder
+    return onehot_type_fit(df, encoder,column_name), encoder
 
-def vehicle_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle"):
+def onehot_type_fit(df:pd.DataFrame, encoder, column_name:str="type_of_vehicle"):
     df = df.copy().reset_index(drop=True)
     encoded_data = encoder.transform(df[[column_name]])
     encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out([column_name]))
     
     return pd.concat([df, encoded_df], axis=1)
 
+def generic_outlier(df:pd.DataFrame, column_name:str, min_val:Union[float,None], max_val:Union[float,None]):
+    proc_df = df.copy()
+    orig_na = proc_df[column_name].isna().sum()
+    if min_val:
+        proc_df[column_name] = proc_df[column_name].where(proc_df[column_name] > min_val, np.nan)
+    if max_val:
+        proc_df[column_name] = proc_df[column_name].where(proc_df[column_name] < max_val, np.nan)
+    print(f" For {column_name} column :: Found {proc_df[column_name].isna().sum() - orig_na} outliers")
+    return proc_df
+
+class VehicleCondensedEncoder:
+    def __init__(self):
+        pass
+
+    def encoding_vehicle_type_custom(self,type_of_vehicle: str):
+        """
+        Groups the different types of vehicles into a smaller number
+        of categories to handle sparsity issues by assigning a number
+        to each meso-group of vehicles. After this has been
+        run, the column should be made categorical
+        """
+        VEHICLE_CATEGORIES = [
+        {"sports car"},
+        {"luxury sedan", "suv"},
+        {"hatchback", "stationwagon", "mid-sized sedan"},
+        {"others", "mpv"},
+        ]
+
+        if not type_of_vehicle or not isinstance(type_of_vehicle, str):
+            type_of_vehicle = "others"
+
+        for cat_num, cat in enumerate(VEHICLE_CATEGORIES, start=1):
+            if type_of_vehicle in cat:
+                return cat_num
+
+        return 0
+
+    def get_condensed(self, df:pd.DataFrame):
+        df["cond_vehicle_type"] = df["type_of_vehicle"].apply(lambda x: self.encoding_vehicle_type_custom(x))
+        return df
+
+    def fit(self, df:pd.DataFrame, column_name:str="cond_vehicle_type"):
+        proc_df = df.copy().reset_index(drop=True)
+        proc_df = self.get_condensed(proc_df)
+        encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')       
+        self.encoder = encoder.fit(proc_df[[column_name]])
+
+    def transform(self, df:pd.DataFrame, column_name:str="cond_vehicle_type"):
+        
+        proc_df = df.copy().reset_index(drop=True)
+        proc_df = self.get_condensed(proc_df)
+        encoded_data = self.encoder.transform(proc_df[[column_name]])
+        encoded_df = pd.DataFrame(encoded_data, columns=self.encoder.get_feature_names_out([column_name]))
+        
+        return pd.concat([proc_df, encoded_df], axis=1)
+
+    def fit_transform(self, df):
+        self.fit(df)
+        return self.transform(df)

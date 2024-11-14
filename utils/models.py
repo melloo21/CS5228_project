@@ -8,6 +8,8 @@ from sklearn.model_selection import GridSearchCV, RepeatedKFold, KFold, Stratifi
 from sklearn.neighbors import KNeighborsRegressor
 
 # import xgboost as xgb
+# import lightgbm as lgb
+
 # Fold references: https://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
 
 class Regression:
@@ -53,8 +55,10 @@ class Regression:
             "svc":svm.SVC(),
             "lr": linear_model.LinearRegression(),
             "knn": KNeighborsRegressor(),
+            "svr": svm.SVR(),
+            'gb': ensemble.GradientBoostingRegressor()
             # 'xgb': xgb.XGBRegressor(),
-            "svr": svm.SVR()
+            # "lgb":  lgb.LGBMRegressor()
         }
         return regressors[model_name]
 
