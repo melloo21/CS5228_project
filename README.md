@@ -18,7 +18,7 @@ python dataset_preprocessing.py --method SimpleImputers_OutliersRemoved_NoVehCon
 ```
 
 2. Model training
-- We use GuildAI to track and monitor each run's progress. For each model that are deemed promising, we run GridSearch to identify the best set of hyperparameters.
+- We use GuildAI to track and monitor each run's progress. For each model that were deemed promising using the learning curve approach, we run GridSearch to identify the best set of hyperparameters.
 
 For XGB grid search:
 
