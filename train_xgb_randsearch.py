@@ -28,7 +28,7 @@ import pickle
 # scaler_type = "minmax"
 # model_type = "xgb"
 save_model = True
-full_search = False
+full_search = True
 features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'dereg_value', 'car_age', 'depreciation', 'arf','coe', 'road_tax',
        'engine_cap',  'mileage', 'no_of_owners', 
             # 'cond_vehicle_type_0',	'cond_vehicle_type_1',	'cond_vehicle_type_2',	
