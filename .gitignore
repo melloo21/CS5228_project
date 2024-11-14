@@ -15,3 +15,5 @@ model_assets/*
 .ipynb_checkpoints/*
 
 */__pycache__/*
+
+sketches-kh.ipynb
