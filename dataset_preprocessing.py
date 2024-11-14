@@ -321,6 +321,29 @@ def omv_imputer(train_df, val_df, test_df, simple_impute=False):
         test_df['omv'] = imputer.transform(test_df[['omv']])
     return train_df, val_df, test_df
 
+def arf_imputer(train_df, val_df, test_df, simple_impute=False, knn_impute=False):
+    if simple_impute:
+        imputer = SimpleImputer(strategy='median')
+        train_df['arf'] = imputer.fit_transform(train_df[['arf']])
+        val_df['arf'] = imputer.transform(val_df[['arf']])
+        test_df['arf'] = imputer.transform(test_df[['arf']])
+    elif knn_impute:
+        # Select features relevant for imputation
+        features = ['manufactured', 'reg_date_year', 'omv', 'arf', 'type_of_vehicle_bus/mini bus',
+            'type_of_vehicle_hatchback', 'type_of_vehicle_luxury sedan',
+            'type_of_vehicle_mid-sized sedan', 'type_of_vehicle_mpv',
+            'type_of_vehicle_others', 'type_of_vehicle_sports car',
+            'type_of_vehicle_stationwagon', 'type_of_vehicle_suv',
+            'type_of_vehicle_truck', 'type_of_vehicle_van',]
+
+        arf_knn_imputer = GenericKNNImputer(feature=features, neighbours=5, imputed_feature="arf")
+
+        train_df['arf'] = arf_knn_imputer.fit_transform(train_df)
+        val_df['arf'] = arf_knn_imputer.transform(val_df)
+        test_df['arf'] = arf_knn_imputer.transform(test_df)
+
+    return train_df, val_df, test_df
+
 
 def fuel_type_imputer(train_df, val_df, test_df):
     train_df = get_fuel_type(train_df)
@@ -414,10 +437,21 @@ def numeric_imputer(train_df, val_df, test_df, impute_type = "KNN", impute_neigh
     test_df[cols] = imputer.transform(test_df[cols])
     return train_df, val_df, test_df
 
+def scalar_transform(train_df, val_df, test_df, features=None):
+    if not features:
+        features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'arf', 'emission_data' ,\
+    'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured', 'road_tax', 'dereg_value']
+    scaler = MinMaxScaler()
+    # Fit and transform the numerical columns
+    train_df[features] = scaler.fit_transform(train_df[features])
+    val_df[features] = scaler.transform(val_df[features])    
+    test_df[features] = scaler.transform(test_df[features])    
+    return train_df, val_df, test_df
+
 def feature_transform(train_df, val_df, test_df, features=None):
     if not features:
-        features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'emission_data' ,\
-    'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured']
+        features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'arf', 'emission_data' ,\
+    'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured', 'road_tax', 'dereg_value']
     for feature in features:
         ft = FeatureTransformer()
         ft.fit_transform(train_df[feature])
@@ -573,13 +607,15 @@ def SimpleImputers_OutliersRemoved_NoVehCond(orig_df, test_df, args_method):
     train_df, val_df, test_df = transmission_imputer(train_df, val_df, test_df)
     train_df, val_df, test_df = mileage_imputer(train_df, val_df, test_df)
     train_df, val_df, test_df = omv_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
+    train_df, val_df, test_df = arf_imputer(train_df, val_df, test_df, knn_impute=True)
     train_df, val_df, test_df = fuel_type_imputer(train_df, val_df, test_df)
     train_df, val_df, test_df = cylinder_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
     train_df, val_df, test_df = category_parser(train_df, val_df, test_df)
     train_df, val_df, test_df = co2_emission_imputer(train_df, val_df, test_df, simple_impute=simple_impute)
     train_df, val_df, test_df = numeric_imputer(train_df, val_df, test_df, impute_type = "KNN", impute_neighbours=5)
-    features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'emission_data' ,\
-    'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured']
+    features = ['curb_weight', 'power', 'cylinder_cnt', 'omv', 'arf', 'emission_data' ,\
+    'engine_cap', 'depreciation', 'mileage', 'coe', 'car_age', 'manufactured', 'road_tax', 'dereg_value']
+    train_df, val_df, test_df = scalar_transform(train_df, val_df, test_df, features=features)
     train_df, val_df, test_df = feature_transform(train_df, val_df, test_df, features=features)
     save_dataset(train_df, val_df, test_df, name)
 
