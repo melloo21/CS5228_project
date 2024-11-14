@@ -10,7 +10,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
 from sklearn.preprocessing import Normalizer, MaxAbsScaler, MinMaxScaler, StandardScaler, QuantileTransformer, RobustScaler, PowerTransformer
 from sklearn.metrics import root_mean_squared_error,root_mean_squared_log_error, r2_score, median_absolute_error,mean_absolute_percentage_error,mean_absolute_error, max_error
-import xgboost as xgb
+import lightgbm as lgb
 from sklearn.model_selection import RandomizedSearchCV,GridSearchCV
 from sklearn.metrics import make_scorer, mean_squared_error
 import pickle
@@ -56,23 +56,24 @@ y_train = train_df['price'].values
 X_val = val_df[features].values
 y_val = val_df['price'].values
 
-### Grid Search ###
+### Parameter grid for LightGBM ###
 param_grid = {
-    'learning_rate': [ 0.05, 0.1, 0.2],
-    'max_depth': [3, 5, 7],
-    'n_estimators': [250, 500, 750],
-    'subsample': [0.6, 0.8, 1.0],
-    'colsample_bytree': [0.6, 0.8, 1.0],
-    'reg_alpha': [0.1, 0.5, 1],  # L1 regularization
-    'reg_lambda': [1, 1.5, 2],    # L2 regularization
+    'learning_rate': [0.02, 0.05, 0.1],
+    'max_depth': [3, 5, 7, 10],
+    'n_estimators': [500, 1000, 1500],
+    'bagging_fraction': [0.6, 0.8, 1.0],
+    'feature_fraction': [0.6, 0.8, 1.0],
+    'lambda_l1': [0.1, 0.5, 1, 1.2, 1.5],  # L1 regularization
+    'lambda_l2': [0.1, 0.5, 1, 1.2, 1.5],    # L2 regularization,
+    'min_data_in_leaf': [5, 10, 15, 20]
 }
 
 # Initialize XGBRegressor
-xgb_reg = xgb.XGBRegressor(objective="reg:squarederror", random_state=42)
+lgb_reg = lgb.LGBMRegressor(objective='regression', random_state=42)
 
 if full_search:
-    random_search = GridSearchCV(
-        estimator=xgb_reg,
+    model_search = GridSearchCV(
+        estimator=lgb_reg,
         param_grid=param_grid,
         scoring=make_scorer(root_mean_squared_error, greater_is_better=False),  # Negative RMSE for maximizing,
         n_jobs=14,
@@ -81,8 +82,8 @@ if full_search:
     )
 else:
     # Set up the randomized search with RMSE as the scoring metric
-    random_search = RandomizedSearchCV(
-        estimator=xgb_reg,
+    model_search = RandomizedSearchCV(
+        estimator=lgb_reg,
         param_distributions=param_grid,
         n_iter=500,  # Number of parameter settings to sample
         scoring=make_scorer(root_mean_squared_error, greater_is_better=False),  # Negative RMSE for maximizing
@@ -93,11 +94,11 @@ else:
     )
 
 # Fit the random search model
-random_search.fit(X_train, y_train)
+model_search.fit(X_train, y_train)
 
 # Get the best model and parameters
-best_xgb = random_search.best_estimator_
-print("Best parameters found: ", random_search.best_params_)
+best_xgb = model_search.best_estimator_
+print("Best parameters found: ", model_search.best_params_)
 
 ########################################################################
 # Fit the model
@@ -111,7 +112,7 @@ y_train_pred = best_xgb.predict(X_train)
 y_val_pred = best_xgb.predict(X_val)
 
 ######## Metrics that we are tracking ########
-best_params = random_search.best_params_
+best_params = model_search.best_params_
 
 train_rmse = root_mean_squared_error(y_train, y_train_pred)
 holdout_rmse = root_mean_squared_error(y_val, y_val_pred)
@@ -137,4 +138,4 @@ print("holdout_mape: %f" % holdout_mape)
 ## saving model
 if save_model:
     # pickle.dump(best_xgb, open(r"./model_assets/xgb.pkl", "wb"))
-    pickle.dump(best_xgb, open(rf"C:/Users/kan_h/Desktop/Kan Hon/Admin/NUS MComp/AY2425_Sem1/CS5228/cs5228-project/CS5228_project/model_assets/xgb_{name}.pkl", "wb"))
+    pickle.dump(best_xgb, open(rf"C:/Users/kan_h/Desktop/Kan Hon/Admin/NUS MComp/AY2425_Sem1/CS5228/cs5228-project/CS5228_project/model_assets/lgbm_{name}.pkl", "wb"))
